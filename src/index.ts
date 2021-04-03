@@ -1,16 +1,16 @@
 import DEBUG from "debug";
 import { timer } from "rxjs";
 
-import { catchError, map, switchMapTo } from "rxjs/operators";
-import { config$ } from "./config";
+import { catchError, switchMapTo, tap } from "rxjs/operators";
+
+import automations$ from "./automations/index"
 
 const debug = DEBUG("reactive-hass.index");
 
-const process$ = config$()
+const process$ = automations$
   .pipe(
-    map((config) => {
-      // TODO: Add the automations.
-      return config
+    tap((output) => {
+      debug(output)
     }),
   );
 
@@ -31,5 +31,5 @@ process$
     complete() {
       debug("completed process");
       process.exit(0)
-    },
+    }
   });

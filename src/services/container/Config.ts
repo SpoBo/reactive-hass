@@ -27,13 +27,15 @@ export interface IRootConfig {
     token: string;
 }
 
-export function config$ (location?: string): Observable<IRootConfig> {
-    location = location || "./data/config.yaml";
-    const config = convict(CONVICT_SCHEMA).loadFile(location);
+export default class Config {
 
-    config.validate();
+    root$(): Observable<IRootConfig> {
+        const config = convict(CONVICT_SCHEMA).loadFile("./data/config.yaml");
 
-    const root: IRootConfig = { host: config.get('host'), token: config.get('token') }
+        config.validate();
 
-    return from([ root ]);
+        const root: IRootConfig = { host: config.get('host'), token: config.get('token') }
+
+        return from([ root ]);
+    }
 }
