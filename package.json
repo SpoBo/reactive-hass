@@ -1,0 +1,42 @@
+{
+    "name": "reactive-hass",
+    "description": "Reactive Home Assistant. Configurable automations in TypeScript and RxJS.",
+    "version": "0.1.0",
+    "author": "Vincent De Snerck <vincent@supervillain.be>",
+    "license": "MIT",
+    "main": "dist/main.js",
+    "scripts": {
+        "lint": "eslint -c .eslintrc.js --ext ts src/",
+        "build": "tsc",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "validate": "npm run build && npm run lint && npm run test",
+        "start": "CHOKIDAR_USEPOLLING=true CONFIG_PATH=./data/config.js ts-node-dev --respawn --ignore-watch ./data/ -- ./src/index.ts",
+        "start:prod": "NODE_ENV=production node ./dist/index.js"
+    },
+    "volta": {
+        "node": "15.13.0"
+    },
+    "dependencies": {
+        "convict": "^6.0.1",
+        "convict-format-with-validator": "^6.0.1",
+        "debug": "^4.1.1",
+        "js-yaml": "^3.14.1",
+        "rxjs": "^6.5.5"
+    },
+    "devDependencies": {
+        "@types/convict": "^6.0.1",
+        "@types/debug": "^4.1.5",
+        "@types/jest": "^26.0.22",
+        "@types/js-yaml": "^4.0.0",
+        "@types/node": "^14.14.37",
+        "@typescript-eslint/eslint-plugin": "^4.20.0",
+        "@typescript-eslint/parser": "^4.20.0",
+        "eslint": "^7.23.0",
+        "eslint-plugin-jest": "^24.3.3",
+        "jest": "^26.6.3",
+        "ts-jest": "^26.5.4",
+        "ts-node-dev": "^1.0.0-pre.44",
+        "typescript": "^4.2.3"
+    }
+}
