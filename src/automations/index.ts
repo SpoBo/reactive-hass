@@ -4,9 +4,13 @@ import servicesCradle, { IServicesCradle } from '../services/cradle'
 
 import requireDir from 'require-dir'
 
-const services = requireDir('../../data/automations')
+const services = requireDir('./')
 
 type Automation = (services: IServicesCradle) => Observable<any>
+
+// NOTE: This is not ideal. But using RxJS causes a lot of listeners to build up at once.
+//       I should hunt down where exactly the issue is. Perhaps it could be avoided by sharing.
+require('events').EventEmitter.defaultMaxListeners = Infinity;
 
 // NOTE: Every service expects the servicesCradle to be injected.
 //       And every service is expected to output an observable.

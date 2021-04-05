@@ -3,8 +3,8 @@ import { merge, partition } from 'rxjs'
 import { delay, distinctUntilChanged, map, mergeMap, scan, switchMap, tap } from 'rxjs/operators'
 import DEBUG from 'debug'
 
-import { IServicesCradle } from '../../src/services/cradle'
-import { HassEntityBase } from '../../src/types'
+import { IServicesCradle } from '../services/cradle'
+import { HassEntityBase } from '../types'
 
 const debug = DEBUG('reactive-hass.automations.bad_plants')
 
