@@ -2,7 +2,7 @@ name: build docker image multi-arch via buildx
 
 on:
   push:
-    branches: master
+    branches: main
 
 jobs:
   build:
