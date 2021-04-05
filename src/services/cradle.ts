@@ -1,9 +1,10 @@
-import { createContainer, InjectionMode, asClass, asFunction } from 'awilix'
-import Config from './container/Config'
-import Socket from './container/Socket'
-import States from './container/States'
-import Events from './container/Events'
-import Service from './container/Service'
+import { createContainer, InjectionMode, asClass } from 'awilix'
+
+import Config from './Config'
+import Socket from './Socket'
+import States from './States'
+import Events from './Events'
+import Service from './Service'
 
 export interface IServicesCradle {
   config: Config,

@@ -4,10 +4,10 @@ import DEBUG from "debug";
 import { concat, empty, merge, Observable, of } from "rxjs";
 
 import Config from "./Config";
-import WebSocket from "../helpers/WebSocket";
+import WebSocket from "./WebSocket";
 import { URL } from "url";
 import { Lifetime, RESOLVER } from "awilix";
-import { MessageBase } from "../../types";
+import { MessageBase } from "../types";
 
 const debug = DEBUG("reactive-hass.socket");
 

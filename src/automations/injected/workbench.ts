@@ -1,7 +1,7 @@
 import ms from 'ms'
 import { concat, empty, merge, of } from 'rxjs'
 import { delay, filter, switchMap } from 'rxjs/operators'
-import { IServicesCradle } from '../../services/index'
+import { IServicesCradle } from '../../services/cradle'
 
 const twoSecondsDelay$ = of(null).pipe(delay(ms('2s')), filter(v => !!v))
 

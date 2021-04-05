@@ -1,7 +1,7 @@
 import { merge } from 'rxjs'
 
-import services from '../services/index'
+import servicesCradle from '../services/cradle'
 
 import workbench from './injected/workbench'
 
-export default merge(workbench(services))
+export default merge(workbench(servicesCradle))

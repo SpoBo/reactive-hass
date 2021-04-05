@@ -1,7 +1,7 @@
 import { Observable } from "rxjs";
-import { IServicesCradle } from "..";
+import { IServicesCradle } from "./cradle";
 import DEBUG from "debug";
-import { StateChangedEventData } from "../../types";
+import { StateChangedEventData } from "../types";
 import Socket from "./Socket";
 import { map } from "rxjs/operators";
 
