@@ -4,8 +4,10 @@ import convict from "convict";
 
 import yaml from "js-yaml";
 
+import { url } from "convict-format-with-validator"
+
 convict.addParser({ extension: ['yml', 'yaml'], parse: yaml.load });
-convict.addFormat(require('convict-format-with-validator').url);
+convict.addFormat(url);
 
 const CONVICT_SCHEMA = {
     host: {
@@ -28,7 +30,6 @@ export interface IRootConfig {
 }
 
 export default class Config {
-
     root$(): Observable<IRootConfig> {
         const config = convict(CONVICT_SCHEMA).loadFile("./data/config.yaml");
 

@@ -112,7 +112,7 @@ export default class Socket {
                     return {
                         messages$,
                         send$,
-                        sendWithId$(message: object) {
+                        sendWithId$(message: Record<string, unknown>) {
                             const id = next()
 
                             const result$ = messagesForId$(id)
@@ -158,7 +158,7 @@ export default class Socket {
             )
     }
 
-    subscribe$(message: object): Observable<any> {
+    subscribe$(message: Record<string, unknown>): Observable<any> {
         return this
             .socket$
             .pipe(
@@ -174,7 +174,7 @@ export default class Socket {
             )
     }
 
-    invoke$(message: object): Observable<any> {
+    invoke$(message: Record<string, unknown>): Observable<any> {
         return this
             .socket$
             .pipe(
@@ -192,7 +192,7 @@ export default class Socket {
 
     // TODO: Filter to be only stuff possible for HA
     //       see types.ts. We have at least a 'type' attribute.
-    get messages$(): Observable<Object> {
+    get messages$(): Observable<Record<string, unknown>> {
         return this
             .socket$
             .pipe(

@@ -92,13 +92,13 @@ type HassEntities = { [entity_id: string]: HassEntity };
 type HassService = {
   name?: string;
   description: string;
-  target?: {} | null;
+  target?: HassServiceTarget | null;
   fields: {
     [field_name: string]: {
       name?: string;
       description: string;
       example: string | boolean | number;
-      selector?: {};
+      selector?: Record<string, unknown>;
     };
   };
 };

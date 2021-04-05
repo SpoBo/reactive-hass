@@ -27,8 +27,8 @@ export default class Service {
         debug('triggering %j', options)
         return this
             .socket
-            .invoke$({ type: 'call_service', ...options }).
-            pipe(
+            .invoke$({ type: 'call_service', ...options })
+            .pipe(
                 switchMap(v => v.success ? empty() : throwError(new ServiceInvocationError(options, v.error)))
             )
     }

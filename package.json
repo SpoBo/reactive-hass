@@ -18,6 +18,7 @@
         "node": "15.13.0"
     },
     "dependencies": {
+        "@types/convict-format-with-validator": "^6.0.2",
         "awilix": "^4.3.3",
         "convict": "^6.0.1",
         "convict-format-with-validator": "^6.0.1",
