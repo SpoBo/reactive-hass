@@ -6,14 +6,14 @@ import { fromEvent, Observable, of } from "rxjs";
 
 const debug = DEBUG("reactive-hass.web-socket");
 
-type MessageType =
+export type WebSocketMessageType =
   | ArrayBufferLike
   | ArrayBufferView
   | string
 
-type SocketManager = {
+export type SocketManager = {
     messages$: Observable<MessageEvent>,
-    send$: (message: MessageType) => Observable<boolean>
+    send$: (message: WebSocketMessageType) => Observable<boolean>
 }
 
 /**
@@ -22,7 +22,7 @@ type SocketManager = {
 export default class WebSocket {
     url: string;
 
-    manager$: Observable<SocketManager>
+    private manager$: Observable<SocketManager>
 
     constructor(url: string) {
         debug('building WebSocket instance for url %s', url)
@@ -80,7 +80,7 @@ export default class WebSocket {
                 })
             )
 
-        function send$(message: MessageType) {
+        function send$(message: WebSocketMessageType) {
             return sharedSocket$
                 .pipe(
                     switchMap(socket => {
@@ -102,7 +102,7 @@ export default class WebSocket {
         )
     }
 
-    send$(message: MessageType): Observable<boolean> {
+    send$(message: WebSocketMessageType): Observable<boolean> {
         return this
             .manager$
             .pipe(
@@ -112,7 +112,7 @@ export default class WebSocket {
             )
     }
 
-    messages$(): Observable<MessageEvent> {
+    get messages$(): Observable<MessageEvent> {
         return this
             .manager$
             .pipe(
