@@ -7,6 +7,11 @@ import { map } from "rxjs/operators";
 
 const debug = DEBUG("reactive-hass.events");
 
+type CreateEventStreamOptions = {
+    type: string
+    event_type?: string
+}
+
 export default class Events {
     socket: Socket
 
@@ -14,14 +19,15 @@ export default class Events {
         this.socket = dependencies.socket
     }
 
-    private createEventStream$(msg: object): Observable<StateChangedEventData> {
+    private createEventStream$(msg: CreateEventStreamOptions): Observable<StateChangedEventData> {
+        debug('creating events stream for %j', msg)
         return this.socket
             .subscribe$(msg)
-        .pipe(
-            map(item => {
-                return item.event.data
-            })
-        )
+            .pipe(
+                map(item => {
+                    return item.event.data
+                })
+            )
     }
 
     get all$(): Observable<StateChangedEventData> {

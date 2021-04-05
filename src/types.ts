@@ -117,7 +117,7 @@ type HassUser = {
   name: string;
 };
 
-type HassServiceTarget = {
+export type HassServiceTarget = {
   entity_id?: string | string[];
   device_id?: string | string[];
   area_id?: string | string[];

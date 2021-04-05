@@ -21,7 +21,7 @@ debug("starting up");
 process$
   .pipe(
     catchError((e, obs$) => {
-      console.error(e);
+      console.error('process errored', e);
 
       return timer(5000)
         .pipe(switchMapTo(obs$));

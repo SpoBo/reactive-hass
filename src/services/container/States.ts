@@ -22,17 +22,17 @@ export default class States {
             )
     }
 
-    entity$(entityId: string): Observable<any> {
+    entity$(entityId: string): Observable<HassEntityBase> {
         const initial$ = this.all$
             .pipe(
                 map(all => all.find(item => item.entity_id === entityId)),
                 filter(v => !!v)
-            )
+            ) as Observable<HassEntityBase>
 
         const updates$ = this.events.stateChanged$
             .pipe(
                 filter(v => v.entity_id === entityId),
-                map(v => v.new_state)
+                map(v => v.new_state as HassEntityBase)
             )
 
         // First, grab all of them and fetch the one for that specific entityId.

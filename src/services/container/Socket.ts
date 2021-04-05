@@ -18,6 +18,11 @@ type SocketManager = {
     sendWithId$: (message: any) => Observable<any>,
 }
 
+export type SocketErrorType = {
+    code: string
+    message: string
+}
+
 export default class Socket {
     config: Config;
 
@@ -164,6 +169,22 @@ export default class Socket {
                             filter(v => {
                                 return v.type !== 'result'
                             })
+                        )
+                })
+            )
+    }
+
+    invoke$(message: object): Observable<any> {
+        return this
+            .socket$
+            .pipe(
+                switchMap((socket) => {
+                    return socket
+                        .sendWithId$(message)
+                        .pipe(
+                            filter(v => {
+                                return v.type === 'result'
+                            }),
                         )
                 })
             )
