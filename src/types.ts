@@ -81,6 +81,8 @@ type HassEntityAttributeBase = {
   hidden?: boolean;
   assumed_state?: boolean;
   device_class?: string;
+  // catch-all for attributes ... .
+  [key: string]: any;
 };
 
 type HassEntity = HassEntityBase & {

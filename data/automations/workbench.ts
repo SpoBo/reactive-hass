@@ -1,7 +1,8 @@
 import ms from 'ms'
 import { concat, empty, merge, of } from 'rxjs'
 import { delay, filter, switchMap } from 'rxjs/operators'
-import { IServicesCradle } from '../../services/cradle'
+
+import { IServicesCradle } from '../../src/services/cradle'
 
 const twoSecondsDelay$ = of(null).pipe(delay(ms('2s')), filter(v => !!v))
 
@@ -33,7 +34,10 @@ export default function test$(cradle: IServicesCradle) {
         toggleLampOnAfterTwoSecondsOff$,
     ]
 
+    return empty()
+    /*
     return merge(
         ...stuff
     )
+    */
 }
