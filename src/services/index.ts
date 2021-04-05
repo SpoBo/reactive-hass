@@ -1,12 +1,14 @@
 import { createContainer, InjectionMode, asClass, asFunction } from 'awilix'
 import Config from './container/Config'
 import Socket from './container/Socket'
-import states$ from './container/states$'
+import states$, { serviceType as states$Type } from './container/states$'
+import events$, { serviceType as events$Type } from './container/events$'
 
 export interface IServicesCradle {
   config: Config,
   socket: Socket,
   states$: typeof states$
+  events$: events$Type
 }
 
 // sets up awilix ... .
@@ -18,7 +20,8 @@ const container = createContainer({
 container.register({
     config: asClass(Config),
     socket: asClass(Socket),
-    states$: asFunction(states$)
+    states$: asFunction(states$),
+    events$: asFunction(events$)
 })
 
 export default container.cradle as IServicesCradle

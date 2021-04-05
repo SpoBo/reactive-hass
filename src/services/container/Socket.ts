@@ -14,7 +14,8 @@ type SocketManager = {
     messages$: Observable<any>
     send$: (message: any) => Observable<boolean>
     next: () => number
-    single$: (message: any) => Observable<any>
+    single$: (message: any) => Observable<any>,
+    multiple$: (message: any) => Observable<any>
 }
 
 export default class Socket {
@@ -97,23 +98,36 @@ export default class Socket {
                         return concat(ensureAuthenticated$, rawSend$(msg))
                     }
 
+                    const messagesForId$ = (id: number) => {
+                        return messages$
+                            .pipe(
+                                tap((v) => debug('msg', v)),
+                                filter((item: any) => {
+                                    return !!item && item.id === id
+                                }),
+                                map(item => item.result)
+                            )
+                    }
+
                     return {
                         messages$,
                         send$,
                         single$(message: object) {
                             const id = next()
 
-                            const messagesForId$ = messages$
+                            const result$ = messagesForId$(id)
                                 .pipe(
-                                    tap((v) => debug('msg', v)),
-                                    filter((item: any) => {
-                                        return !!item && item.id === id
-                                    }),
-                                    take(1),
-                                    map(item => item.result)
+                                    take(1)
                                 )
 
-                            return merge(messagesForId$, send$({...message, id}))
+                            return merge(result$, send$({...message, id}))
+                        },
+                        multiple$(message: object) {
+                            const id = next()
+
+                            const result$ = messagesForId$(id)
+
+                            return merge(result$, send$({...message, id}))
                         },
                         next
                     };
@@ -145,6 +159,17 @@ export default class Socket {
                 switchMap((socket) => {
                     return socket
                         .single$({ type })
+                })
+            )
+    }
+
+    stream$(message: object): Observable<any> {
+        return this
+            .socket$
+            .pipe(
+                switchMap((socket) => {
+                    return socket
+                        .multiple$(message)
                 })
             )
     }
