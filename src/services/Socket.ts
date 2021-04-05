@@ -24,15 +24,10 @@ export type SocketErrorType = {
 }
 
 export default class Socket {
-    config: Config;
-
     socket$: Observable<SocketManager>;
 
     constructor({ config }: { config: Config }) {
-        this.config = config
-
-        this.socket$ = this
-            .config
+        this.socket$ = config
             .root$()
             .pipe(
                 map((config) => {
