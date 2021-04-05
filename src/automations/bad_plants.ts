@@ -58,13 +58,13 @@ export default function test$(cradle: IServicesCradle) {
                 }
 
                 const mapped = problems
-                 .map(entityId => {
-                     const plant = plants[entityId]
+                    .map(entityId => {
+                        const plant = plants[entityId]
 
-                     return `${plant.attributes.friendly_name || plant.entity_id} (${plant.attributes.problem})`
-                 })
+                        return `${plant.attributes.friendly_name || plant.entity_id} (${plant.attributes.problem})`
+                    })
 
-                return `Plants ${problems.join(', ')} are in bad shape.`
+                return `Plants ${mapped.join(', ')} are in bad shape.`
             })
         )
 
