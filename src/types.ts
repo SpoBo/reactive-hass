@@ -1,8 +1,8 @@
 // This comes from https://github.com/home-assistant/home-assistant-js-websocket/blob/master/lib/types.ts
 
-export type Error = 1 | 2 | 3 | 4;
+type Error = 1 | 2 | 3 | 4;
 
-export type UnsubscribeFunc = () => void;
+type UnsubscribeFunc = () => void;
 
 export type MessageBase = {
   id?: number;
@@ -10,30 +10,36 @@ export type MessageBase = {
   [key: string]: any;
 };
 
-export type HassEventBase = {
+type HassContext = {
+    id: string;
+    user_id: string | null;
+    parent_id: string | null;
+}
+
+type HassEventBase = {
   origin: string;
   time_fired: string;
-  context: {
-    id: string;
-    user_id: string;
-  };
+  context: HassContext;
 };
 
-export type HassEvent = HassEventBase & {
+type HassEvent = HassEventBase & {
   event_type: string;
   data: { [key: string]: any };
 };
 
-export type StateChangedEvent = HassEventBase & {
+type StateChangedEvent = HassEventBase & {
   event_type: "state_changed";
-  data: {
-    entity_id: string;
-    new_state: HassEntity | null;
-    old_state: HassEntity | null;
-  };
+  data: StateChangedEventData;
 };
 
-export type HassConfig = {
+export type StateChangedEventData = {
+  entity_id: string;
+  new_state: HassEntity | null;
+  old_state: HassEntity | null;
+  context: HassContext;
+};
+
+ type HassConfig = {
   latitude: number;
   longitude: number;
   elevation: number;
@@ -66,7 +72,7 @@ export type HassEntityBase = {
   context: { id: string; user_id: string | null };
 };
 
-export type HassEntityAttributeBase = {
+type HassEntityAttributeBase = {
   friendly_name?: string;
   unit_of_measurement?: string;
   icon?: string;
@@ -77,13 +83,13 @@ export type HassEntityAttributeBase = {
   device_class?: string;
 };
 
-export type HassEntity = HassEntityBase & {
+type HassEntity = HassEntityBase & {
   attributes: { [key: string]: any };
 };
 
-export type HassEntities = { [entity_id: string]: HassEntity };
+type HassEntities = { [entity_id: string]: HassEntity };
 
-export type HassService = {
+type HassService = {
   name?: string;
   description: string;
   target?: {} | null;
@@ -97,21 +103,21 @@ export type HassService = {
   };
 };
 
-export type HassDomainServices = {
+type HassDomainServices = {
   [service_name: string]: HassService;
 };
 
-export type HassServices = {
+type HassServices = {
   [domain: string]: HassDomainServices;
 };
 
-export type HassUser = {
+type HassUser = {
   id: string;
   is_owner: boolean;
   name: string;
 };
 
-export type HassServiceTarget = {
+type HassServiceTarget = {
   entity_id?: string | string[];
   device_id?: string | string[];
   area_id?: string | string[];

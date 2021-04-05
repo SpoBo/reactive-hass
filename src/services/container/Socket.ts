@@ -7,6 +7,7 @@ import Config from "./Config";
 import WebSocket from "../helpers/WebSocket";
 import { URL } from "url";
 import { Lifetime, RESOLVER } from "awilix";
+import { MessageBase } from "../../types";
 
 const debug = DEBUG("reactive-hass.socket");
 
@@ -14,8 +15,7 @@ type SocketManager = {
     messages$: Observable<any>
     send$: (message: any) => Observable<boolean>
     next: () => number
-    single$: (message: any) => Observable<any>,
-    multiple$: (message: any) => Observable<any>
+    sendWithId$: (message: any) => Observable<any>,
 }
 
 export default class Socket {
@@ -47,18 +47,15 @@ export default class Socket {
                             filter(v => !!v)
                         )
 
-                    const parsedMessages$ = stringMessages$
+                    // We know for a fact it can only be a string here.
+                    const parsedMessages$: Observable<MessageBase> = (stringMessages$ as Observable<string>)
+                        .pipe(
+                            map(v => JSON.parse(v))
+                        )
 
                     const authRequired$ = parsedMessages$
                         .pipe(
-                            filter(msg => {
-                                if (!msg) {
-                                    return false
-                                }
-
-                                const parsed = JSON.parse(msg)
-                                return parsed.type === 'auth_required'
-                            }),
+                            filter(msg => msg.type === 'auth_required'),
                             tap(() => debug('auth required!'))
                         )
 
@@ -81,10 +78,10 @@ export default class Socket {
                         )
 
                     const ensureAuthenticated$ = of(1)
-                    .pipe(
-                        delay(1000),
-                        switchMapTo(empty())
-                    )
+                        .pipe(
+                            delay(1000),
+                            switchMapTo(empty())
+                        )
 
                     let i = 0;
                     function next() {
@@ -101,33 +98,24 @@ export default class Socket {
                     const messagesForId$ = (id: number) => {
                         return messages$
                             .pipe(
-                                tap((v) => debug('msg', v)),
                                 filter((item: any) => {
                                     return !!item && item.id === id
-                                }),
-                                map(item => item.result)
+                                })
                             )
                     }
 
                     return {
                         messages$,
                         send$,
-                        single$(message: object) {
-                            const id = next()
-
-                            const result$ = messagesForId$(id)
-                                .pipe(
-                                    take(1)
-                                )
-
-                            return merge(result$, send$({...message, id}))
-                        },
-                        multiple$(message: object) {
+                        sendWithId$(message: object) {
                             const id = next()
 
                             const result$ = messagesForId$(id)
 
-                            return merge(result$, send$({...message, id}))
+                            const sendAndHide$ = send$({...message, id})
+                                .pipe(switchMapTo(empty()))
+
+                            return merge(result$, sendAndHide$)
                         },
                         next
                     };
@@ -151,25 +139,32 @@ export default class Socket {
             )
     }
 
-    command$(type: string): Observable<any> {
-        debug('command$ %s', type)
+    single$(type: string): Observable<any> {
         return this
             .socket$
             .pipe(
                 switchMap((socket) => {
                     return socket
-                        .single$({ type })
+                        .sendWithId$({ type })
+                        .pipe(
+                            take(1)
+                        )
                 })
             )
     }
 
-    stream$(message: object): Observable<any> {
+    subscribe$(message: object): Observable<any> {
         return this
             .socket$
             .pipe(
                 switchMap((socket) => {
                     return socket
-                        .multiple$(message)
+                        .sendWithId$(message)
+                        .pipe(
+                            filter(v => {
+                                return v.type !== 'result'
+                            })
+                        )
                 })
             )
     }
