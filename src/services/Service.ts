@@ -2,7 +2,7 @@ import { empty, Observable, of, throwError } from "rxjs";
 import { IServicesCradle } from "./cradle";
 import DEBUG from "debug";
 import Socket, { SocketErrorType } from "./Socket";
-import { map, switchMap } from "rxjs/operators";
+import { map, switchMap, tap } from "rxjs/operators";
 import { HassServiceTarget } from '../types'
 
 const debug = DEBUG("reactive-hass.service");
@@ -24,11 +24,11 @@ export default class Service {
     }
 
     call$(options: CallServiceParameters): Observable<any> {
-        debug('triggering %j', options)
         return this
             .socket
             .invoke$({ type: 'call_service', ...options })
             .pipe(
+                tap(() => debug('triggering %j', options)),
                 switchMap(v => v.success ? empty() : throwError(new ServiceInvocationError(options, v.error)))
             )
     }
