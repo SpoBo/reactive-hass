@@ -1,6 +1,6 @@
 import ms from 'ms'
 import { merge, partition } from 'rxjs'
-import { delay, distinctUntilChanged, map, mergeMap, scan, switchMap, tap } from 'rxjs/operators'
+import { delay, distinctUntilChanged, map, mergeMap, scan, skip, switchMap, take, tap } from 'rxjs/operators'
 import DEBUG from 'debug'
 
 import { IServicesCradle } from '../services/cradle'
@@ -8,14 +8,29 @@ import { HassEntityBase } from '../types'
 
 const debug = DEBUG('reactive-hass.automations.bad_plants')
 
-export default function test$(cradle: IServicesCradle) {
+/**
+ * TODO: Unit Testing.
+ */
+export default function bad_plants(cradle: IServicesCradle) {
     const plantsGrouped$ = cradle.states.entities$('plant.*')
 
     const plantsGroupedWithDelayedBad$ = plantsGrouped$
         .pipe(
             map(plant$ => {
-                const [ok$, bad$] = partition(plant$, (plant) => plant.state === 'ok')
-                return merge(ok$, bad$.pipe(delay(ms('10m'))))
+                const first$ = plant$
+                    .pipe(take(1))
+
+                const [ok$, bad$] = partition(plant$.pipe(skip(1)), (plant) => plant.state === 'ok')
+                const rest$ = merge(
+                    ok$.pipe(tap((plant) => debug(`plant ${plant.entity_id} is OK.`))),
+                    bad$
+                      .pipe(
+                          tap((plant) => debug(`plant ${plant.entity_id} has problem ${plant.attributes.problem}`)),
+                          delay(ms('10m'))
+                      )
+                )
+
+                return merge(first$, rest$)
             }),
         )
 
@@ -35,7 +50,8 @@ export default function test$(cradle: IServicesCradle) {
     const message$ = events$
         .pipe(
             map((plants) => {
-                const problems = Object.values(plants)
+                const problems = Object
+                    .values(plants)
                     .reduce((acc, plant) => {
                         if (plant.state !== 'ok') {
                             acc.push(plant.entity_id)
