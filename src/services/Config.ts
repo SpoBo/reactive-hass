@@ -31,7 +31,7 @@ export interface IRootConfig {
 
 export default class Config {
     root$(): Observable<IRootConfig> {
-        const config = convict(CONVICT_SCHEMA).loadFile("./data/config.yaml");
+        const config = convict(CONVICT_SCHEMA).loadFile(process.env.CONFIG_PATH || "/data/config.yaml");
 
         config.validate();
 
