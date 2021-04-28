@@ -1,6 +1,6 @@
 import ms from 'ms'
-import { merge, partition } from 'rxjs'
-import { delay, distinctUntilChanged, map, mergeMap, scan, skip, switchMap, take, tap } from 'rxjs/operators'
+import { merge } from 'rxjs'
+import { debounceTime, distinctUntilChanged, map, mergeMap, scan, skip, switchMap, take, tap } from 'rxjs/operators'
 import DEBUG from 'debug'
 
 import { IServicesCradle } from '../services/cradle'
@@ -17,20 +17,17 @@ export default function bad_plants(cradle: IServicesCradle) {
     const plantsGroupedWithDelayedBad$ = plantsGrouped$
         .pipe(
             map(plant$ => {
-                const first$ = plant$
-                    .pipe(take(1))
+                return plant$
+                    .pipe(
+                        tap(plant => {
+                            if (plant.state === 'ok') {
+                                debug(`plant ${plant.entity_id} is OK.`)
+                                return
+                            }
 
-                const [ok$, bad$] = partition(plant$.pipe(skip(1)), (plant) => plant.state === 'ok')
-                const rest$ = merge(
-                    ok$.pipe(tap((plant) => debug(`plant ${plant.entity_id} is OK.`))),
-                    bad$
-                      .pipe(
-                          tap((plant) => debug(`plant ${plant.entity_id} has problem ${plant.attributes.problem}`)),
-                          delay(ms('10m'))
-                      )
-                )
-
-                return merge(first$, rest$)
+                            debug(`plant ${plant.entity_id} has problem ${plant.attributes.problem}`)
+                        })
+                    )
             }),
         )
 
@@ -67,27 +64,53 @@ export default function bad_plants(cradle: IServicesCradle) {
                   return `All plants (${names.join(', ')}) are OK.`
                 }
 
+                let bad = ''
                 if (problems.length === 1) {
                     const plant = plants[problems[0]]
 
-                    return `Plant ${plant.attributes.friendly_name || plant.entity_id} has a problem. (${plant.attributes.problem})`
+                    bad = `Plant ${plant.attributes.friendly_name || plant.entity_id} has a problem (${plant.attributes.problem}).`
+                } else if (problems.length > 1) {
+                    const mapped = problems
+                        .map(entityId => {
+                            const plant = plants[entityId]
+
+                            return `${plant.attributes.friendly_name || plant.entity_id} (${plant.attributes.problem})`
+                        })
+                    bad = `Plants ${mapped.join(', ')} are in bad shape.`
                 }
 
-                const mapped = problems
-                    .map(entityId => {
-                        const plant = plants[entityId]
+                const mappedGood = Object
+                    .values(plants)
+                    .reduce((acc, plant) => {
+                        if (plant.state === 'ok') {
+                          acc.push(plant.attributes?.friendly_name || plant.entity_id)
+                        }
 
-                        return `${plant.attributes.friendly_name || plant.entity_id} (${plant.attributes.problem})`
-                    })
+                        return acc
+                    }, [] as string[])
 
-                return `Plants ${mapped.join(', ')} are in bad shape.`
-            })
+                const good = mappedGood.length === 0 ? null : `${mappedGood.length === 1 ? 'Plant' : 'Plants'} ${mappedGood.join(', ')} ${mappedGood.length === 1 ? 'is' : 'are'} fine.`
+
+                return [bad, good].filter(v => v).join(' ')
+            }),
+            debounceTime(ms('2s'))
         )
 
-    return message$
+    const first$ = message$
+        .pipe(
+            take(1),
+            tap(v => debug(v))
+        )
+    const rest$ = message$
         .pipe(
             tap(v => debug(v)),
+            skip(1),
             distinctUntilChanged(),
+            debounceTime(ms('2m')),
+        )
+
+    return merge(first$, rest$)
+        .pipe(
             switchMap(message => {
                 return cradle.service.call$({
                     domain: 'notify',
