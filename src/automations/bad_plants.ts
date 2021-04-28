@@ -101,6 +101,7 @@ export default function bad_plants(cradle: IServicesCradle) {
             take(1),
             tap(v => debug(v))
         )
+
     const rest$ = message$
         .pipe(
             tap(v => debug(v)),
@@ -111,6 +112,7 @@ export default function bad_plants(cradle: IServicesCradle) {
 
     return merge(first$, rest$)
         .pipe(
+            distinctUntilChanged(),
             switchMap(message => {
                 return cradle.service.call$({
                     domain: 'notify',
