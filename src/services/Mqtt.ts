@@ -7,7 +7,7 @@ import {
 } from "mqtt";
 
 import { concat, Observable, fromEvent, Subject } from "rxjs";
-import { filter, map, switchMap, tap, shareReplay, take, takeUntil } from "rxjs/operators";
+import { filter, map, switchMap, tap, shareReplay, takeUntil } from "rxjs/operators";
 import Config from "./Config";
 import { IServicesCradle } from "./cradle";
 
@@ -55,7 +55,6 @@ function mqttClient (url: string): Observable<ISimplifiedMqttClient> {
                                 publishSubscriber.error(err);
                             }
 
-                            debug('completing')
                             publishSubscriber.complete();
                         });
                     });
@@ -175,7 +174,7 @@ export default class Mqtt {
                     }
 
                     return d
-                        .publish$({ topic, payload, options }).pipe(tap({ complete() { done$.next() } }));
+                        .publish$({ topic, payload, options }).pipe(tap({ complete() { done$.next(true) } }));
                 }),
             );
     }

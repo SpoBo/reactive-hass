@@ -11,7 +11,7 @@ const debug = DEBUG('reactive-hass.automations.bad_plants')
 /**
  * TODO: Unit Testing.
  */
-export default function bad_plants(cradle: IServicesCradle) {
+export default function plants_health(cradle: IServicesCradle) {
     const plantsGrouped$ = cradle.states.entities$('plant.*')
 
     const plantsGroupedWithDelayedBad$ = plantsGrouped$

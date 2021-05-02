@@ -11,7 +11,11 @@ const services = requireDir('./')
 
 const debug = DEBUG('reactive-hass.automations')
 
-type Automation = (services: IServicesCradle) => Observable<any>
+export type AutomationOptions = {
+    debug: (message?: any, ...optionalParams: any[]) => void;
+}
+
+type Automation = (services: IServicesCradle, options: AutomationOptions) => Observable<any>
 
 // NOTE: This is not ideal. But using RxJS causes a lot of listeners to build up at once.
 //       I should hunt down where exactly the issue is. Perhaps it could be avoided by sharing.
@@ -39,7 +43,7 @@ const mapped = Object
                 switchMap(state => {
                     if (state.on) {
                         console.log('starting automation', name)
-                        return automation.default(servicesCradle)
+                        return automation.default(servicesCradle, { debug: DEBUG('reactive-hass.automation.' + name) })
                     }
 
                     console.log('stopping automation', name)

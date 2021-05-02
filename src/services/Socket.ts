@@ -1,7 +1,7 @@
-import { delay, filter, map, shareReplay, switchMap, switchMapTo, take, tap } from "rxjs/operators";
+import { delay, filter, map, shareReplay, switchMap, switchMapTo, take, takeUntil, tap } from "rxjs/operators";
 import DEBUG from "debug";
 
-import { concat, empty, merge, Observable, of } from "rxjs";
+import { concat, empty, merge, Observable, of, Subject } from "rxjs";
 
 import Config from "./Config";
 import WebSocket from "./WebSocket";
@@ -180,6 +180,7 @@ export default class Socket {
                             filter(v => {
                                 return v.type === 'result'
                             }),
+                            take(1)
                         )
                 })
             )
