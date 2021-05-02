@@ -22,11 +22,25 @@ const CONVICT_SCHEMA = {
         env: "HASS_TOKEN",
         format: String,
     },
+    mqttDiscoveryPrefix: {
+        default: "homeassistant",
+        doc: "The prefix to use in MQTT for everything related to Reactive HASS.",
+        "env": "HASS_MQTT_DISCOVERY_PREFIX",
+        format: String
+    },
+    mqttUrl: {
+        default: "mqtt://mqtt.local",
+        doc: "The URL to use for MQTT",
+        "env": "HASS_MQTT_PREFIX",
+        format: String
+    }
 };
 
 export interface IRootConfig {
     host: string;
     token: string;
+    mqttDiscoveryPrefix: string;
+    mqttUrl: string;
 }
 
 export default class Config {
@@ -35,7 +49,12 @@ export default class Config {
 
         config.validate();
 
-        const root: IRootConfig = { host: config.get('host'), token: config.get('token') }
+        const root: IRootConfig = {
+            host: config.get('host'),
+            token: config.get('token'),
+            mqttDiscoveryPrefix: config.get('mqttDiscoveryPrefix'),
+            mqttUrl: config.get('mqttUrl'),
+        }
 
         return from([ root ]);
     }

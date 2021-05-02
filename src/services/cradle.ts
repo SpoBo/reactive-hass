@@ -5,6 +5,8 @@ import Socket from './Socket'
 import States from './States'
 import Events from './Events'
 import Service from './Service'
+import Mqtt from './Mqtt'
+import DiscoverySwitch from './DiscoverySwitch'
 
 export interface IServicesCradle {
   config: Config,
@@ -12,6 +14,8 @@ export interface IServicesCradle {
   states: States,
   events: Events,
   service: Service,
+  mqtt: Mqtt,
+  discoverySwitch: DiscoverySwitch
 }
 
 // sets up awilix ... .
@@ -26,6 +30,8 @@ container.register({
     states: asClass(States),
     events: asClass(Events),
     service: asClass(Service),
+    mqtt: asClass(Mqtt),
+    discoverySwitch: asClass(DiscoverySwitch),
 })
 
 export default container.cradle as IServicesCradle

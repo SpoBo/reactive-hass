@@ -1,4 +1,4 @@
-import { map, share, shareReplay, switchMap, take } from "rxjs/operators";
+import { map, share, shareReplay, switchMap } from "rxjs/operators";
 import WS, { MessageEvent } from "ws";
 import DEBUG from "debug";
 
