@@ -1,8 +1,8 @@
-import { empty } from "rxjs";
+import { EMPTY } from "rxjs";
 
 /**
  * Controls if someone is home or not.
  */
 export default function () {
-    return empty()
+    return EMPTY
 }

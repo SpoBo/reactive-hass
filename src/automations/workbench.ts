@@ -1,5 +1,5 @@
 import ms from 'ms'
-import { concat, empty, merge, of } from 'rxjs'
+import { concat, EMPTY, of } from 'rxjs'
 import { delay, filter, switchMap } from 'rxjs/operators'
 
 import { IServicesCradle } from '../services/cradle'
@@ -17,7 +17,7 @@ export default function test$(cradle: IServicesCradle) {
         .entity$('light.atmosphere_lamp')
         .pipe(
             switchMap(v => {
-                return v.state === 'off' ? concat(twoSecondsDelay$, turnOn$) : empty()
+                return v.state === 'off' ? concat(twoSecondsDelay$, turnOn$) : EMPTY
             })
         )
 
@@ -34,7 +34,7 @@ export default function test$(cradle: IServicesCradle) {
         toggleLampOnAfterTwoSecondsOff$,
     ]
 
-    return empty()
+    return EMPTY
     /*
     return merge(
         ...stuff

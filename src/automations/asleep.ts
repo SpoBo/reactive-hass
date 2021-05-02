@@ -1,5 +1,22 @@
-import { empty, interval, Observable, of } from "rxjs";
-import { map, pluck, combineLatestWith, startWith, distinctUntilChanged, tap, switchMap, concatWith, merge, mergeWith, share, filter, withLatestFrom } from "rxjs/operators";
+import {
+    EMPTY,
+    interval,
+    Observable,
+    of
+} from "rxjs";
+import {
+    map,
+    pluck,
+    combineLatestWith,
+    startWith,
+    distinctUntilChanged,
+    tap,
+    switchMap,
+    mergeWith,
+    share,
+    filter,
+    withLatestFrom
+} from "rxjs/operators";
 import { AutomationOptions } from ".";
 import inTimeRange from "../helpers/inTimeRange";
 import { IServicesCradle } from "../services/cradle";
@@ -62,7 +79,7 @@ export default function (services: IServicesCradle, { debug }: AutomationOptions
             withLatestFrom(current$),
             switchMap(([ asleep, currentlyAsleep ]) => {
                 if (asleep === currentlyAsleep) {
-                    return empty()
+                    return EMPTY
                 }
 
                 return services

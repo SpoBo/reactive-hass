@@ -1,4 +1,4 @@
-import { empty, Observable, of, throwError } from "rxjs";
+import { EMPTY, Observable, of, throwError } from "rxjs";
 import { IServicesCradle } from "./cradle";
 import DEBUG from "debug";
 import Socket, { SocketErrorType } from "./Socket";
@@ -29,7 +29,7 @@ export default class Service {
             .invoke$({ type: 'call_service', ...options })
             .pipe(
                 tap(() => debug('triggering %j', options)),
-                switchMap(v => v.success ? empty() : throwError(new ServiceInvocationError(options, v.error)))
+                switchMap(v => v.success ? EMPTY : throwError(new ServiceInvocationError(options, v.error)))
             )
     }
 }

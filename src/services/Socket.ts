@@ -1,7 +1,7 @@
-import { delay, filter, map, shareReplay, switchMap, switchMapTo, take, takeUntil, tap } from "rxjs/operators";
+import { delay, filter, map, shareReplay, switchMap, switchMapTo, take, tap } from "rxjs/operators";
 import DEBUG from "debug";
 
-import { concat, empty, merge, Observable, of, Subject } from "rxjs";
+import { concat, EMPTY, merge, Observable, of } from "rxjs";
 
 import Config from "./Config";
 import WebSocket from "./WebSocket";
@@ -66,7 +66,7 @@ export default class Socket {
 
                     const sendAuth$ = rawSend$({ type: 'auth', access_token: config.token })
                         .pipe(
-                            switchMapTo(empty())
+                            switchMapTo(EMPTY)
                         )
 
                     const respondToAuthentication$ = authRequired$
@@ -80,7 +80,7 @@ export default class Socket {
                     const ensureAuthenticated$ = of(1)
                         .pipe(
                             delay(1000),
-                            switchMapTo(empty())
+                            switchMapTo(EMPTY)
                         )
 
                     let i = 0;
@@ -113,7 +113,7 @@ export default class Socket {
                             const result$ = messagesForId$(id)
 
                             const sendAndHide$ = send$({...message, id})
-                                .pipe(switchMapTo(empty()))
+                                .pipe(switchMapTo(EMPTY))
 
                             return merge(result$, sendAndHide$)
                         },

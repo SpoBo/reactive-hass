@@ -1,4 +1,4 @@
-import { concat, empty, merge, Observable, of } from 'rxjs'
+import { concat, EMPTY, merge, Observable, of } from 'rxjs'
 
 import servicesCradle, { IServicesCradle } from '../services/cradle'
 
@@ -47,7 +47,7 @@ const mapped = Object
                     }
 
                     console.log('stopping automation', name)
-                    return empty()
+                    return EMPTY
                 })
             )
     })
