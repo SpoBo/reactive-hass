@@ -5,9 +5,10 @@ import {
     IClientPublishOptions,
     IPubrecPacket,
 } from "mqtt";
+import ms from "ms";
 
-import { concat, Observable, fromEvent, Subject } from "rxjs";
-import { filter, map, switchMap, tap, shareReplay, takeUntil } from "rxjs/operators";
+import { concat, Observable, fromEvent, Subject, EMPTY, merge, of } from "rxjs";
+import { filter, map, switchMap, tap, shareReplay, takeUntil, delay } from "rxjs/operators";
 import Config from "./Config";
 import { IServicesCradle } from "./cradle";
 
@@ -19,6 +20,10 @@ export interface ISimplifiedMqttClient {
         payload,
         options,
     }: { topic: string; payload: string | Buffer; options?: IClientPublishOptions }) => Observable<any>;
+}
+
+type MqttSubscribeOptions = {
+    assumed?: any
 }
 
 const debug = DEBUG("reactive-hass.mqtt");
@@ -126,23 +131,23 @@ function mqttClient (url: string): Observable<ISimplifiedMqttClient> {
 
 export default class Mqtt {
     private config: Config;
+    private client$: Observable<ISimplifiedMqttClient>;
 
     constructor(dependencies: IServicesCradle) {
         this.config = dependencies.config;
+
+        debug('constructing mqtt instance')
+        this.client$ = this.config.root$()
+            .pipe(
+                switchMap(config => {
+                    return mqttClient(config.mqttUrl)
+                }),
+                shareReplay(1)
+            )
     }
 
-    private get client$(): Observable<ISimplifiedMqttClient> {
-        return this.config.root$()
-        .pipe(
-            switchMap(config => {
-                return mqttClient(config.mqttUrl)
-                    .pipe(shareReplay(1))
-            })
-        )
-    }
-
-    public subscribe$(topic: string) {
-        return this.client$
+    public subscribe$(topic: string, options?: MqttSubscribeOptions) {
+        const stream$ = this.client$
             .pipe(
                 switchMap((d) => {
                     const subscribe$ = d.subscribe$({ topic });
@@ -161,6 +166,19 @@ export default class Mqtt {
                     return concat(subscribe$, replies$);
                 }),
             );
+
+        const assumed$ = isPresent(options?.assumed) ?
+            of(options?.assumed)
+                .pipe(
+                    delay(ms('2s')),
+                    takeUntil(stream$),
+                    switchMap(value => {
+                        return this.publish$(topic, value)
+                    })
+                )
+            : EMPTY
+
+        return merge(stream$, assumed$)
     }
 
     public publish$(topic: string, payload: string | Buffer | object, options?: IClientPublishOptions) {
@@ -174,8 +192,24 @@ export default class Mqtt {
                     }
 
                     return d
-                        .publish$({ topic, payload, options }).pipe(tap({ complete() { done$.next(true) } }));
+                        .publish$({ topic, payload, options })
+                        .pipe(
+                            tap({
+                                complete() {
+                                    done$.next(true)
+                                }
+                            })
+                        );
                 }),
+                tap({
+                    complete() {
+                        debug('completed publish')
+                    }
+                })
             );
     }
+}
+
+function isPresent(value: any) {
+    return value !== null && typeof value !== 'undefined'
 }

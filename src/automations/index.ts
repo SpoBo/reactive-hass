@@ -32,7 +32,7 @@ const mapped = Object
     .entries(services as Record<string, { default: Automation }>)
     .map(([ name, automation ]) => {
         console.log('found automation', name)
-        const switch$ = discoverySwitch.create$(name)
+        const switch$ = discoverySwitch.create$(name, { name: `Reactive Hass Automation: ${name}` })
 
         // TODO: maybe create a scoped container specifically for the automation.
         // TODO: maybe inject extra services specific for the automation.

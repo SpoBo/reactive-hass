@@ -3,7 +3,8 @@ import { IServicesCradle } from "./cradle"
 import Mqtt from "./Mqtt"
 import DEBUG from 'debug'
 import { concat, merge, Observable, of } from "rxjs"
-import { switchMap, tap } from "rxjs/operators"
+import { delay, switchMap, switchMapTo, takeUntil, tap } from "rxjs/operators"
+import HassStatus from "./HassStatus"
 
 const debug = DEBUG('reactive-hass.discovery-switch')
 
@@ -12,17 +13,24 @@ type SwitchState = {
     on: boolean
 }
 
+type SwitchOptions = {
+    name?: string
+}
+
 export default class DiscoverySwitch {
     private mqtt: Mqtt
     private config: Config
+    private hassStatus: HassStatus
 
     constructor(dependencies: IServicesCradle) {
         this.mqtt = dependencies.mqtt
         this.config = dependencies.config
+        this.hassStatus = dependencies.hassStatus
     }
 
-    create$(name: String): Observable<SwitchState> {
-        return this.config
+    create$(name: String, options?: SwitchOptions): Observable<SwitchState> {
+        debug('asking for switch with name %s', name)
+        const switch$ = this.config
             .root$()
             .pipe(
                 switchMap(config => {
@@ -37,7 +45,7 @@ export default class DiscoverySwitch {
                             configTopic,
                             {
                                 unique_id: id,
-                                name,
+                                name: options?.name || name,
                                 state_topic: stateTopic,
                                 command_topic: cmdTopic,
                                 /*
@@ -51,13 +59,18 @@ export default class DiscoverySwitch {
                             }
                         )
                         .pipe(
-                            tap(() => {
-                                debug('advertising switch %s on mqtt discovery', name)
+                            tap({
+                                next: () => {
+                                    debug('advertising switch %s on mqtt discovery', name)
+                                },
+                                complete: () => {
+                                    debug('advertised switch %s', name)
+                                }
                             }),
                         )
 
                     const commands$ = this.mqtt
-                        .subscribe$(cmdTopic)
+                        .subscribe$(cmdTopic, { assumed: 'ON' })
                         .pipe(
                             tap((v) => {
                                 debug('command for %s -> %j', name, v)
@@ -71,8 +84,18 @@ export default class DiscoverySwitch {
 
                                 const set$ = this.mqtt
                                     .publish$(stateTopic, v)
+                                    .pipe(
+                                        tap({
+                                            next: (v) => {
+                                                debug('got switch value', v)
+                                            },
+                                            complete: () => {
+                                                debug('completed switch publish')
+                                            }
+                                        })
+                                    )
 
-                                return concat(set$, of({ name, on }))
+                                return concat(set$, of({ name, on } as SwitchState))
                             })
                         )
 
@@ -86,5 +109,8 @@ export default class DiscoverySwitch {
                     )
                 })
             )
+
+        return this.hassStatus.online$
+            .pipe(switchMapTo(switch$))
     }
 }
