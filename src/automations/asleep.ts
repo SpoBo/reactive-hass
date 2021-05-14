@@ -38,6 +38,10 @@ function inTimeRange$ (start: string, stop: string): Observable<boolean> {
  * It's basically just checking when my phone is plugged in because I do charge it every might.
  *
  * TODO: Also check if there was some upstairs motion a little bit before plugging in. That way we know it with a little bit more certainty.
+ * downstairs: binary_sensor.lumi_lumi_sensor_motion_aq2_387fec02_ias_zone
+ * upstairs: binary_sensor.motion_sensor_staircase_upstairs
+ *
+ * TODO: Disable things when we go to sleep. treadmill, heater in office, etc.
  */
 export default function (services: IServicesCradle, { debug }: AutomationOptions) {
     const { states, notify } = services
@@ -50,6 +54,7 @@ export default function (services: IServicesCradle, { debug }: AutomationOptions
     const definitelySleeping$ = of(false) // inTimeRange$('00:30', '05:00')
     const mightBeGoingToSleep$ = inTimeRange$('21:30', '04:00')
 
+    // TODO: Convert to an exposed binary sensor.
     const current$ = states.entity$('input_boolean.asleep')
         .pipe(
             pluck('state'),

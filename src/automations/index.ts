@@ -1,4 +1,4 @@
-import { concat, EMPTY, merge, Observable, of } from 'rxjs'
+import { EMPTY, merge, Observable } from 'rxjs'
 
 import servicesCradle, { IServicesCradle } from '../services/cradle'
 
@@ -28,28 +28,48 @@ require('events').EventEmitter.defaultMaxListeners = Infinity;
 
 const { discoverySwitch } = servicesCradle
 
-const mapped = Object
-    .entries(services as Record<string, { default: Automation }>)
-    .map(([ name, automation ]) => {
-        console.log('found automation', name)
-        const switch$ = discoverySwitch.create$(name, { name: `Reactive Hass Automation: ${name}` })
+const { RUN } = process.env
 
-        // TODO: maybe create a scoped container specifically for the automation.
-        // TODO: maybe inject extra services specific for the automation.
-        // TODO: every automation can have a piece of config
+let observable$: Observable<any> = EMPTY
 
-        return switch$
-            .pipe(
-                switchMap(state => {
-                    if (state.on) {
-                        console.log('starting automation', name)
-                        return automation.default(servicesCradle, { debug: DEBUG('reactive-hass.automation.' + name) })
-                    }
+if (RUN) {
+    if (!services[RUN]) {
+        throw new Error(`Running automation ${RUN} but it does not exist. Either start it without RUN env parameter or give it the name of an automation that does exist.`)
+    }
 
-                    console.log('stopping automation', name)
-                    return EMPTY
-                })
+    observable$ = services[RUN].default(servicesCradle, { debug: DEBUG('reactive-hass.run-automation.' + RUN) })
+} else {
+    const mapped = Object
+        .entries(services as Record<string, { default: Automation }>)
+        .map(([ name, automation ]) => {
+            console.log('found automation', name)
+            const switch$ = discoverySwitch.create$(
+                name,
+                true,
+                {
+                    name: `Reactive Hass Automation: ${name}`
+                }
             )
-    })
 
-export default merge(...mapped)
+            // TODO: maybe create a scoped container specifically for the automation.
+            // TODO: maybe inject extra services specific for the automation.
+            // TODO: every automation can have a piece of config
+
+            return switch$
+                .pipe(
+                    switchMap(state => {
+                        if (state.on) {
+                            console.log('starting automation', name)
+                            return automation.default(servicesCradle, { debug: DEBUG('reactive-hass.automation.' + name) })
+                        }
+
+                        console.log('stopping automation', name)
+                        return EMPTY
+                    })
+                )
+        })
+
+    observable$ = merge(...mapped)
+}
+
+export default observable$
