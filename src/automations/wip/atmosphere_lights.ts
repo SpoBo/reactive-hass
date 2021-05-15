@@ -1,6 +1,5 @@
-
 import { EMPTY } from "rxjs"
-import { IServicesCradle } from "../services/cradle"
+import { IServicesCradle } from "../../services/cradle"
 
 /*
  * Controls the atmosphere lights.

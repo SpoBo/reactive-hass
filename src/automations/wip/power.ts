@@ -1,5 +1,5 @@
 import { EMPTY } from "rxjs"
-import { IServicesCradle } from "../services/cradle"
+import { IServicesCradle } from "../../services/cradle"
 
 /*
  * Detects when we are generating power or not. Exposes it as an input boolean.

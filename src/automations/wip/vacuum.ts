@@ -1,5 +1,5 @@
 import { EMPTY } from "rxjs"
-import { IServicesCradle } from "../services/cradle"
+import { IServicesCradle } from "../../services/cradle"
 
 /*
  * Makes the vacuum clean when nobody is home.

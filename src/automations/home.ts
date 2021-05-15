@@ -1,6 +1,6 @@
 import { merge, of } from "rxjs";
-import { distinctUntilChanged, map, mergeScan, switchMap, withLatestFrom } from "rxjs/operators";
-import { AutomationOptions } from ".";
+import { distinctUntilChanged, map, mergeScan, switchMap } from "rxjs/operators";
+import { AutomationOptions } from "./index";
 import { IServicesCradle } from "../services/cradle";
 
 // TODO: Put in config
