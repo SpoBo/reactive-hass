@@ -5,6 +5,10 @@ import convict from "convict";
 import yaml from "js-yaml";
 
 import { url } from "convict-format-with-validator"
+import { shareReplay } from "rxjs/operators";
+import DEBUG from 'debug'
+
+const debug = DEBUG('reactive-hass.config')
 
 convict.addParser({ extension: ['yml', 'yaml'], parse: yaml.load });
 convict.addFormat(url);
@@ -28,6 +32,12 @@ const CONVICT_SCHEMA = {
         "env": "HASS_MQTT_DISCOVERY_PREFIX",
         format: String
     },
+    idPrefix: {
+        default: "reactive_hass",
+        doc: "A prefix to put on the IDs. Maybe you want to have a secondary instance during development with different IDs so there is no overlap.",
+        "env": "HASS_ID_PREFIX",
+        format: String
+    },
     mqttUrl: {
         default: "mqtt://mqtt.local",
         doc: "The URL to use for MQTT",
@@ -39,6 +49,7 @@ const CONVICT_SCHEMA = {
 export interface IRootConfig {
     host: string;
     token: string;
+    idPrefix?: string;
     mqttDiscoveryPrefix: string;
     mqttUrl: string;
 }
@@ -52,10 +63,12 @@ export default class Config {
         const root: IRootConfig = {
             host: config.get('host'),
             token: config.get('token'),
+            idPrefix: config.get('idPrefix'),
             mqttDiscoveryPrefix: config.get('mqttDiscoveryPrefix'),
             mqttUrl: config.get('mqttUrl'),
         }
+        debug('root:', root)
 
-        return from([ root ]);
+        return from([ root ]).pipe(shareReplay(1));
     }
 }

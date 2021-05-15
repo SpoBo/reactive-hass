@@ -1,6 +1,7 @@
 import DEBUG from 'debug'
-import { concat, EMPTY, merge, Observable, of, ReplaySubject, Subject } from 'rxjs'
-import { delay, map, mergeMapTo, pluck, share, shareReplay, switchMap, switchMapTo, take, tap } from 'rxjs/operators'
+import { EMPTY } from 'rxjs'
+import { map, shareReplay, switchMap, switchMapTo, take, tap } from 'rxjs/operators'
+import { ValueControl } from '../helpers/ValueControl'
 import { IServicesCradle } from './cradle'
 import Discovery from './Discovery'
 import Mqtt from './Mqtt'
@@ -8,63 +9,6 @@ const debug = DEBUG('reactive-hass.binary-sensor')
 
 type BinarySensorOptions = {
     name?: string
-}
-
-type BinarySensorState = {
-    id: string,
-    on: boolean
-}
-
-type BinarySensorControlPayload = {
-    id: string,
-    defaultState: boolean,
-    advertise$: Observable<boolean>,
-    emit$: (value: boolean) => Observable<boolean>
-}
-
-// Could be something more generic .... like a switachable control.
-// Can map to a BinarySensor, a Sensor, a Switch, etc ... .
-// They can all have the exact same API.
-// Just a different way of initializing it.
-class BinarySensorControl {
-    private setSubject: ReplaySubject<boolean>
-    private payload: BinarySensorControlPayload
-    state$: Observable<BinarySensorState>
-
-    constructor(payload: BinarySensorControlPayload) {
-        this.setSubject = new ReplaySubject<boolean>(1)
-        this.payload = payload
-
-        const initial$ = of(this.payload.defaultState)
-
-        const set$ = merge(initial$, this.setSubject)
-            .pipe(
-                tap((v) => debug('set', v)),
-                switchMap(value => {
-                    debug('publishing!')
-                    return this.payload.emit$(value)
-                }),
-                map((on) => {
-                    debug('getting value', on)
-                    return {
-                        id: this.payload.id,
-                        on
-                    }
-                })
-            )
-
-        this.state$ = merge(this.payload.advertise$.pipe(mergeMapTo(EMPTY)), set$)
-            .pipe(shareReplay(1))
-    }
-
-    set(value: boolean): Observable<boolean> {
-        debug('setting %s to %s', this.payload.id, value)
-        this.setSubject.next(value)
-        return this.state$
-            .pipe(
-                pluck('on')
-            )
-    }
 }
 
 /**
@@ -82,7 +26,7 @@ export default class BinarySensor {
         this.mqtt = services.mqtt
     }
 
-    create(id: string, defaultState: boolean, options?: BinarySensorOptions): BinarySensorControl {
+    create(id: string, defaultState: boolean, options?: BinarySensorOptions): ValueControl<boolean> {
         debug('asking for a binary sensor with id %s with defaultState %s and options %o', id, defaultState, options)
 
         const config$ = this
@@ -94,7 +38,7 @@ export default class BinarySensor {
                     return {
                         topic: `${root}/config`,
                         payload: {
-                            unique_id: id,
+                            unique_id: discovery.id,
                             name: options?.name || id,
                             state_topic: `${root}/state`,
                             // expire_after
@@ -117,8 +61,6 @@ export default class BinarySensor {
                 shareReplay(1)
             )
 
-        // This advertises the thing ....
-        // but we need a way to advertise it when somebody becomes interested in the BinarySensorControl.
         const advertise$ = config$
             .pipe(
                 switchMap(config => {
@@ -134,13 +76,14 @@ export default class BinarySensor {
                 })
             )
 
-        return new BinarySensorControl({
+        return new ValueControl<boolean>({
             id,
             defaultState,
-            advertise$: advertise$,
+            run$: advertise$,
             emit$: (value: boolean) => {
                 return config$
                     .pipe(
+                        take(1),
                         switchMap((config) => {
                             return this.mqtt.publish$(config.payload.state_topic, value ? 'ON' : 'OFF')
                                 .pipe(tap((v) => debug(v)))

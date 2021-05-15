@@ -6,6 +6,8 @@ import requireDir from 'require-dir'
 
 import DEBUG from 'debug'
 import { switchMap } from 'rxjs/operators'
+import DiscoverySwitch from '../services/DiscoverySwitch'
+import { ValueControl } from '../helpers/ValueControl'
 
 const services = requireDir('./')
 
@@ -43,22 +45,24 @@ if (RUN) {
         .entries(services as Record<string, { default: Automation }>)
         .map(([ name, automation ]) => {
             console.log('found automation', name)
-            const switch$ = discoverySwitch.create$(
-                name,
-                true,
-                {
-                    name: `Reactive Hass Automation: ${name}`
-                }
-            )
+            const automationSwitch = discoverySwitch
+                .create(
+                    name,
+                    true,
+                    {
+                        name: `Reactive Hass Automation: ${name}`
+                    }
+                ) as ValueControl<boolean>
 
             // TODO: maybe create a scoped container specifically for the automation.
             // TODO: maybe inject extra services specific for the automation.
             // TODO: every automation can have a piece of config
 
-            return switch$
+            return automationSwitch.state$
                 .pipe(
                     switchMap(state => {
-                        if (state.on) {
+                        debug('detected change of state for automation %s to %o', name, state)
+                        if (state.current) {
                             console.log('starting automation', name)
                             return automation.default(servicesCradle, { debug: DEBUG('reactive-hass.automation.' + name) })
                         }

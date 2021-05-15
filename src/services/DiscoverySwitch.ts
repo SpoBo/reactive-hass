@@ -1,177 +1,123 @@
-import Config from "./Config"
 import { IServicesCradle } from "./cradle"
 import Mqtt from "./Mqtt"
 import DEBUG from 'debug'
-import { concat, merge, Observable, of, ReplaySubject, Subject } from "rxjs"
-import { delay, map, share, shareReplay, switchMap, switchMapTo, take, takeUntil, tap } from "rxjs/operators"
-import HassStatus from "./HassStatus"
+import { concat, EMPTY, merge, Observable, of, ReplaySubject, Subject } from "rxjs"
+import { delay, map, share, shareReplay, switchMap, switchMapTo, take, takeUntil, tap, withLatestFrom } from "rxjs/operators"
 import ms from "ms"
 import Discovery from "./Discovery"
+import { ValueControl } from "../helpers/ValueControl"
 
 const debug = DEBUG('reactive-hass.discovery-switch')
-
-type SwitchState = {
-    id: string,
-    on: boolean,
-    set: (value: boolean) => Observable<boolean>
-}
 
 type SwitchOptions = {
     name?: string
 }
 
+/**
+ * This is something which can be set by us or by the outside.
+ * We can consume the state to see the latest value.
+ * Whenever we set the value we will also emit the state.
+ */
 export default class DiscoverySwitch {
     private mqtt: Mqtt
-    private config: Config
-    private hassStatus: HassStatus
     private discovery: Discovery
 
     constructor(dependencies: IServicesCradle) {
         this.mqtt = dependencies.mqtt
-        this.config = dependencies.config
-        this.hassStatus = dependencies.hassStatus
         this.discovery = dependencies.discovery
     }
 
-    // TODO: Clean up this API. Want something which does not keep emitting the set function.
-    // TODO: Have a similar API for the input boolean then.
-    create$(id: string, defaultState: boolean, options?: SwitchOptions): Observable<SwitchState> {
+    create(id: string, defaultState: boolean, options?: SwitchOptions): ValueControl<boolean> {
         debug('asking for a switch with id %s and options %j', id, options)
+        // TODO: improve the discovery API a bit further.
         const config$ = this.discovery
             .create$(id, 'switch')
             .pipe(
                 map((discovery) => {
                     const root = `${discovery.prefix}/switch/${discovery.id}`
+                    const cmdTopic = `${root}/set`
                     return {
                         topic: `${root}/config`,
                         payload: {
-                            unique_id: id,
+                            unique_id: discovery.id,
                             name: options?.name || id,
                             state_topic: `${root}/state`,
-                            // expire_after
-                            // icon
-                            // off_delay
-                            // payload_available
-                            // payload_not_available
-                            // payload_off
-                            // payload_on
-                            //
-                            /*
-                              TODO: add availability. which is false when we are not online.
-                              availability: {
-                              topic: `${id}/available`
-                              },
-                            */
+                            command_topic: cmdTopic,
+                            optimistic: false,
+                            retain: true
                         }
                     }
                 }),
                 shareReplay(1)
             )
 
-        const switch$ = this.config
-            .root$()
+        const advertise$ = config$
             .pipe(
                 switchMap(config => {
-                    const name = `reactive_hass-${id}`
-                    // TODO: Create a kind of discovery service to make this discovery stuff easier ... .
-                    const root = `${config.mqttDiscoveryPrefix}/switch/${name}`
-                    const cmdTopic = `${root}/set`
-                    const configTopic = `${root}/config`
-                    const stateTopic = `${root}/state`
-
-                    const setSubject = new ReplaySubject(1)
-
-                    function set(value: boolean) {
-                        setSubject.next(value)
-                        return set$.pipe(take(1))
-                    }
-
-                    const advertise$ = this.mqtt
+                    return this.mqtt
                         .publish$(
-                            configTopic,
-                            {
-                                unique_id: id,
-                                name: options?.name || id,
-                                state_topic: stateTopic,
-                                command_topic: cmdTopic,
-                                /*
-                                TODO: add availability. which is false when we are not online.
-                                availability: {
-                                    topic: `${id}/available`
-                                },
-                                */
-                                optimistic: false,
-                                retain: true
-                            }
+                            config.topic,
+                            config.payload
                         )
                         .pipe(
-                            tap({
-                                next: () => {
-                                    debug('advertising switch %s on mqtt discovery', id)
-                                },
-                                complete: () => {
-                                    debug('advertised switch %s', id)
-                                }
-                            }),
+                            take(1),
+                            switchMapTo(EMPTY)
                         )
+                })
+            )
 
-                    const commands$ = this.mqtt
-                        .subscribe$(cmdTopic)
+        // TODO: Figure out how to put all this in ... .
+        const commands$ = config$
+            .pipe(
+                switchMap(config => {
+                    debug('going to subscribe to command topic %s', config.payload.command_topic)
+                    return this.mqtt
+                        .subscribe$(config.payload.command_topic)
                         .pipe(
                             tap((v) => {
                                 debug('command for %s -> %j', id, v)
                             })
                         )
-
-                    const mqttState$ = commands$
-                        .pipe(
-                            switchMap(v => {
-                                const on = v === 'ON'
-
-                                const set$ = this.mqtt
-                                    .publish$(stateTopic, v)
-                                    .pipe(
-                                        tap((v) => {
-                                            debug('got switch value', v)
-                                        })
-                                    )
-
-                                return concat(set$, of({ id, on, set } as SwitchState))
-                            }),
-                            share(),
-                            tap((v => debug('got value in switch %o', v)))
-                        )
-
-                    const set$ = setSubject
-                        .pipe(
-                            switchMap(value => {
-                                return this.mqtt.publish$(cmdTopic, value ? 'ON' : 'OFF')
-                            })
-                        )
-
-                    const defaultState$ = of(defaultState)
-                        .pipe(
-                            delay(ms('2s')),
-                            takeUntil(mqttState$),
-                            tap((value) => set(value))
-                        )
-
-                    const states$ = merge(mqttState$, defaultState$)
-
-                    return merge(
-                        advertise$,
-                        states$,
-                        set$
-                    ).pipe(
-                        tap(v => {
-                            debug('switch %o', v)
-                        }),
-                        shareReplay(1)
-                    )
                 })
             )
 
-        return this.hassStatus.online$
-            .pipe(switchMapTo(switch$))
+        const mqttState$ = commands$
+            .pipe(
+                tap((value) => {
+                    const on = value === 'ON'
+
+                    setSubject.next(on)
+                })
+            )
+
+        const setSubject = new Subject<boolean>()
+
+        const set$ = config$
+            .pipe(
+                withLatestFrom(setSubject),
+                switchMap(([ config, value ]) => {
+                    return this.mqtt.publish$(config.payload.state_topic, value ? 'ON' : 'OFF')
+                })
+            )
+
+        const run$ = merge(advertise$, set$, mqttState$)
+
+
+        return new ValueControl<boolean>({
+            id,
+            defaultState,
+            subject: setSubject,
+            run$,
+            emit$: (value: boolean) => {
+                return config$
+                    .pipe(
+                        take(1),
+                        switchMap((config) => {
+                            return this.mqtt.publish$(config.payload.state_topic, value ? 'ON' : 'OFF')
+                                .pipe(tap((v) => debug(v)))
+                        })
+                    )
+            }
+        })
     }
 }

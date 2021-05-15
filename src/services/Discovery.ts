@@ -33,7 +33,7 @@ export default class Discovery {
                 map(config => {
                     return {
                         prefix: config.mqttDiscoveryPrefix,
-                        id: `reactive_hass-${categoryName}-${id}`
+                        id: [config.idPrefix, categoryName, id].filter(v => v).join('-')
                     }
                 })
             )
