@@ -52,11 +52,12 @@ export interface IRootConfig {
     idPrefix?: string;
     mqttDiscoveryPrefix: string;
     mqttUrl: string;
+    objectId: string;
 }
 
 export default class Config {
     root$(): Observable<IRootConfig> {
-        const config = convict(CONVICT_SCHEMA).loadFile(process.env.CONFIG_PATH || "/data/config.yaml");
+        const config = convict(CONVICT_SCHEMA).loadFile(process.env.CONFIG_PATH || "./config.yaml");
 
         config.validate();
 
@@ -66,6 +67,7 @@ export default class Config {
             idPrefix: config.get('idPrefix'),
             mqttDiscoveryPrefix: config.get('mqttDiscoveryPrefix'),
             mqttUrl: config.get('mqttUrl'),
+            objectId: 'reactive-hass'
         }
         debug('root:', root)
 

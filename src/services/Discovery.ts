@@ -4,9 +4,25 @@ import { Observable } from "rxjs"
 import { map, switchMapTo } from "rxjs/operators"
 import HassStatus from "./HassStatus"
 
+type DiscoveryDevice = {
+    model: string;
+    identifiers: string[]
+}
+
+type DiscoveryPayload = {
+    unique_id: string;
+    name: string;
+    state_topic: string;
+    object_id: string;
+    device: DiscoveryDevice;
+}
+
 type DiscoveryState = {
-    prefix: string,
-    id: string
+    topics: {
+        root: string;
+        config: string;
+    };
+    payload: DiscoveryPayload;
 }
 
 /**
@@ -26,14 +42,31 @@ export default class Discovery {
     /**
      * TODO: Would be nice if we could receive the config and automatically emit it when needed.
      **/
-    create$(id: string, categoryName: string): Observable<DiscoveryState> {
+    create$(id: string, categoryName: string, options?: { name?: string }): Observable<DiscoveryState> {
         const prefix$ = this.config
             .root$()
             .pipe(
                 map(config => {
+                    const uniqueId = [config.idPrefix, categoryName, id].filter(v => v).join('-');
+
+                    const root = `${config.mqttDiscoveryPrefix}/${categoryName}/${uniqueId}`
                     return {
-                        prefix: config.mqttDiscoveryPrefix,
-                        id: [config.idPrefix, categoryName, id].filter(v => v).join('-')
+                        topics: {
+                            root,
+                            config: `${root}/config`,
+                        },
+                        payload: {
+                            object_id: config.objectId,
+                            unique_id: uniqueId,
+                            state_topic: `${root}/state`,
+                            name: options?.name ?? id,
+                            device: {
+                                model: 'Reactive HASS',
+                                identifiers: [
+                                    config.objectId
+                                ]
+                            }
+                        }
                     }
                 })
             )

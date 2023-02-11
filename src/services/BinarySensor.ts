@@ -31,16 +31,13 @@ export default class BinarySensor {
 
         const config$ = this
             .discovery
-            .create$(id, 'binary_sensor')
+            .create$(id, 'binary_sensor', { name: options?.name })
             .pipe(
                 map((discovery) => {
-                    const root = `${discovery.prefix}/binary_sensor/${discovery.id}`
                     return {
-                        topic: `${root}/config`,
+                        topic: discovery.topics.config,
                         payload: {
-                            unique_id: discovery.id,
-                            name: options?.name || id,
-                            state_topic: `${root}/state`,
+                            ...discovery.payload
                             // expire_after
                             // icon
                             // off_delay

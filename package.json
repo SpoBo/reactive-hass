@@ -11,7 +11,7 @@
         "test": "jest",
         "test:watch": "jest --watch",
         "validate": "npm run build && npm run lint && npm run test",
-        "start": "CHOKIDAR_USEPOLLING=true CONFIG_PATH=./data/config.yaml ts-node-dev --respawn --ignore-watch ./data/ -- ./src/index.ts",
+        "start": "CHOKIDAR_USEPOLLING=true CONFIG_PATH=./config.yaml ts-node-dev --respawn --ignore-watch ./data/ -- ./src/index.ts",
         "start:prod": "NODE_ENV=production node ./dist/index.js"
     },
     "volta": {

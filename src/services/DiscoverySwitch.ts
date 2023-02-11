@@ -31,17 +31,14 @@ export default class DiscoverySwitch {
         debug('asking for a switch with id %s and options %j', id, options)
         // TODO: improve the discovery API a bit further.
         const config$ = this.discovery
-            .create$(id, 'switch')
+            .create$(id, 'switch', { name: options?.name })
             .pipe(
                 map((discovery) => {
-                    const root = `${discovery.prefix}/switch/${discovery.id}`
-                    const cmdTopic = `${root}/set`
+                    const cmdTopic = `${discovery.topics.root}/set`
                     return {
-                        topic: `${root}/config`,
+                        topic: discovery.topics.config,
                         payload: {
-                            unique_id: discovery.id,
-                            name: options?.name || id,
-                            state_topic: `${root}/state`,
+                            ...discovery.payload,
                             command_topic: cmdTopic,
                             optimistic: false,
                             retain: true
