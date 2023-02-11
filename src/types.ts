@@ -81,6 +81,7 @@ type HassEntityAttributeBase = {
   hidden?: boolean;
   assumed_state?: boolean;
   device_class?: string;
+  state_class?: string; // measurement
   // catch-all for attributes ... .
   [key: string]: any;
 };
@@ -124,3 +125,8 @@ export type HassServiceTarget = {
   device_id?: string | string[];
   area_id?: string | string[];
 };
+
+export type SensorConfig = {
+  type: 'binary';
+  name?: string;
+}

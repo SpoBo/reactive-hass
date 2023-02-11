@@ -1,11 +1,10 @@
-import { IServicesCradle } from "./cradle"
-import Mqtt from "./Mqtt"
 import DEBUG from 'debug'
-import { concat, EMPTY, merge, Observable, of, ReplaySubject, Subject } from "rxjs"
-import { delay, map, share, shareReplay, switchMap, switchMapTo, take, takeUntil, tap, withLatestFrom } from "rxjs/operators"
-import ms from "ms"
-import Discovery from "./Discovery"
+import { EMPTY, merge, Subject } from "rxjs"
+import { map, shareReplay, switchMap, switchMapTo, take, tap, withLatestFrom } from "rxjs/operators"
 import { ValueControl } from "../helpers/ValueControl"
+import { IServicesCradle } from "./cradle"
+import Discovery from "./Discovery"
+import Mqtt from "./Mqtt"
 
 const debug = DEBUG('reactive-hass.discovery-switch')
 
@@ -29,7 +28,6 @@ export default class DiscoverySwitch {
 
     create(id: string, defaultState: boolean, options?: SwitchOptions): ValueControl<boolean> {
         debug('asking for a switch with id %s and options %j', id, options)
-        // TODO: improve the discovery API a bit further.
         const config$ = this.discovery
             .create$(id, 'switch', { name: options?.name })
             .pipe(
@@ -98,7 +96,6 @@ export default class DiscoverySwitch {
             )
 
         const run$ = merge(advertise$, set$, mqttState$)
-
 
         return new ValueControl<boolean>({
             id,

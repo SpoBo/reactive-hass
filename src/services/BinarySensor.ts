@@ -1,5 +1,5 @@
 import DEBUG from 'debug'
-import { EMPTY } from 'rxjs'
+import { EMPTY, merge, Observable } from 'rxjs'
 import { map, shareReplay, switchMap, switchMapTo, take, tap } from 'rxjs/operators'
 import { ValueControl } from '../helpers/ValueControl'
 import { IServicesCradle } from './cradle'
@@ -88,5 +88,20 @@ export default class BinarySensor {
                     )
             }
         })
+    }
+
+    create$(state$: Observable<boolean>, id: string, defaultState: boolean, options?: BinarySensorOptions): Observable<any> {
+        const instance = this.create(id, defaultState, options);
+        const set$ = state$
+            .pipe(
+                switchMap((value) => {
+                    return instance.set(!!value)
+                })
+            )
+
+        return merge(
+            instance.state$,
+            set$
+        )
     }
 }

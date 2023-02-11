@@ -6,7 +6,6 @@ import requireDir from 'require-dir'
 
 import DEBUG from 'debug'
 import { switchMap } from 'rxjs/operators'
-import DiscoverySwitch from '../services/DiscoverySwitch'
 import { ValueControl } from '../helpers/ValueControl'
 
 const services = requireDir('./')
@@ -19,14 +18,11 @@ export type AutomationOptions = {
 
 type Automation = (services: IServicesCradle, options: AutomationOptions) => Observable<any>
 
-// NOTE: This is not ideal. But using RxJS causes a lot of listeners to build up at once.
-//       I should hunt down where exactly the issue is. Perhaps it could be avoided by sharing.
-require('events').EventEmitter.defaultMaxListeners = Infinity;
-
 // NOTE: Every service expects the servicesCradle to be injected.
 //       And every service is expected to output an observable.
 // TODO: The output of the observable is never logged. Instead, use special services to log output from a specific automation.
 // TODO: Every automation will automatically restart when it crashes. A crashing automation should not impact other automations.
+// TODO: How would we give access to the sensors? :man_thinking:
 
 const { discoverySwitch } = servicesCradle
 

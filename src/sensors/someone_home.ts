@@ -1,17 +1,16 @@
-import { merge, of } from "rxjs";
-import { distinctUntilChanged, map, mergeScan, switchMap } from "rxjs/operators";
-import { AutomationOptions } from "./index";
+import { of } from "rxjs";
+import { distinctUntilChanged, map, mergeScan } from "rxjs/operators";
 import { IServicesCradle } from "../services/cradle";
+import { SensorOptions } from "./index";
 
-// TODO: Put in config
+// TODO: Put in config.
 const OCCUPANTS = [ 'person.vincent', 'person.marife' ]
 
 /**
  * Controls if someone is home or not.
- *
- * TODO: determine if someone is arriving home or not and expose extra states around that.
  */
-export default function (services: IServicesCradle, { debug }: AutomationOptions) {
+export default function (services: IServicesCradle, { debug }: SensorOptions) {
+    // TODO: We can extract this to a helper ...
     const entities$ = of(...OCCUPANTS)
         .pipe(
             map(entity => {
@@ -32,7 +31,7 @@ export default function (services: IServicesCradle, { debug }: AutomationOptions
             }, {})
         )
 
-    const someoneHome$ = homePerPerson$
+    return homePerPerson$
         .pipe(
             map(totals => {
                 debug('totals', totals)
@@ -40,20 +39,4 @@ export default function (services: IServicesCradle, { debug }: AutomationOptions
             }),
             distinctUntilChanged()
         )
-
-    const homeSwitch = services.binarySensor
-        .create(`someone_home`, false, { name: 'Someone Home' })
-
-    const set$ = someoneHome$
-        .pipe(
-            switchMap((value) => {
-                debug('setting someone home to', value)
-                return homeSwitch.set(value)
-            })
-        )
-
-    return merge(
-        homeSwitch.state$,
-        set$
-    )
 }
