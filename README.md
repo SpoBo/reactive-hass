@@ -24,5 +24,6 @@ Swap DI containers.
 - Should have no way to mutate stuff in sensors
 - Should give access in automations to sensors.
 - Should give access to other sensors in sensors.
+https://github.com/microsoft/tsyringe ?
 
 Allow easy loading of sensors from the sensor folder in other sensors or in automations.

@@ -30,7 +30,7 @@ export default function (services: IServicesCradle, { debug }: SensorOptions) {
 
   return homePerPerson$.pipe(
     map((totals) => {
-      debug(`totals: ${totals}`);
+      debug('totals', totals);
       return Object.values(totals).some((v) => v === "home");
     }),
     distinctUntilChanged()
