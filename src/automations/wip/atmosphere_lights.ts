@@ -1,5 +1,4 @@
-import { EMPTY } from "rxjs"
-import { IServicesCradle } from "../../services/cradle"
+import { EMPTY } from "rxjs";
 
 /*
  * Controls the atmosphere lights.
@@ -10,6 +9,6 @@ import { IServicesCradle } from "../../services/cradle"
  * When media is paused they should brighten.
  * The max brightness should also depend on how dark it is outside.
  */
-export default function atmosphereLights$(cradle: IServicesCradle) {
-    return EMPTY
+export default function atmosphereLights$() {
+  return EMPTY;
 }

@@ -1,16 +1,24 @@
-import DEBUG from 'debug'
-import { EMPTY, merge, Subject } from "rxjs"
-import { map, shareReplay, switchMap, switchMapTo, take, tap, withLatestFrom } from "rxjs/operators"
-import { ValueControl } from "../helpers/ValueControl"
-import { IServicesCradle } from "./cradle"
-import Discovery from "./Discovery"
-import Mqtt from "./Mqtt"
+import DEBUG from "debug";
+import { EMPTY, merge, Subject } from "rxjs";
+import {
+  map,
+  shareReplay,
+  switchMap,
+  switchMapTo,
+  take,
+  tap,
+  withLatestFrom,
+} from "rxjs/operators";
+import { ValueControl } from "../helpers/ValueControl";
+import { IServicesCradle } from "./cradle";
+import Discovery from "./Discovery";
+import Mqtt from "./Mqtt";
 
-const debug = DEBUG('reactive-hass.discovery-switch')
+const debug = DEBUG("reactive-hass.discovery-switch");
 
 type SwitchOptions = {
-    name?: string
-}
+  name?: string;
+};
 
 /**
  * This is something which can be set by us or by the outside.
@@ -18,100 +26,98 @@ type SwitchOptions = {
  * Whenever we set the value we will also emit the state.
  */
 export default class DiscoverySwitch {
-    private mqtt: Mqtt
-    private discovery: Discovery
+  private mqtt: Mqtt;
+  private discovery: Discovery;
 
-    constructor(dependencies: IServicesCradle) {
-        this.mqtt = dependencies.mqtt
-        this.discovery = dependencies.discovery
-    }
+  constructor(dependencies: IServicesCradle) {
+    this.mqtt = dependencies.mqtt;
+    this.discovery = dependencies.discovery;
+  }
 
-    create(id: string, defaultState: boolean, options?: SwitchOptions): ValueControl<boolean> {
-        debug('asking for a switch with id %s and options %j', id, options)
-        const config$ = this.discovery
-            .create$(id, 'switch', { name: options?.name })
-            .pipe(
-                map((discovery) => {
-                    const cmdTopic = `${discovery.topics.root}/set`
-                    return {
-                        topic: discovery.topics.config,
-                        payload: {
-                            ...discovery.payload,
-                            command_topic: cmdTopic,
-                            optimistic: false,
-                            retain: true
-                        }
-                    }
-                }),
-                shareReplay(1)
-            )
+  create(
+    id: string,
+    defaultState: boolean,
+    options?: SwitchOptions
+  ): ValueControl<boolean> {
+    debug("asking for a switch with id %s and options %j", id, options);
+    const config$ = this.discovery
+      .create$(id, "switch", { name: options?.name })
+      .pipe(
+        map((discovery) => {
+          const cmdTopic = `${discovery.topics.root}/set`;
+          return {
+            topic: discovery.topics.config,
+            payload: {
+              ...discovery.payload,
+              command_topic: cmdTopic,
+              optimistic: false,
+              retain: true,
+            },
+          };
+        }),
+        shareReplay(1)
+      );
 
-        const advertise$ = config$
-            .pipe(
-                switchMap(config => {
-                    return this.mqtt
-                        .publish$(
-                            config.topic,
-                            config.payload
-                        )
-                        .pipe(
-                            take(1),
-                            switchMapTo(EMPTY)
-                        )
-                })
-            )
+    const advertise$ = config$.pipe(
+      switchMap((config) => {
+        return this.mqtt
+          .publish$(config.topic, config.payload)
+          .pipe(take(1), switchMapTo(EMPTY));
+      })
+    );
 
-        // TODO: Figure out how to put all this in ... .
-        const commands$ = config$
-            .pipe(
-                switchMap(config => {
-                    debug('going to subscribe to command topic %s', config.payload.command_topic)
-                    return this.mqtt
-                        .subscribe$(config.payload.command_topic)
-                        .pipe(
-                            tap((v) => {
-                                debug('command for %s -> %j', id, v)
-                            })
-                        )
-                })
-            )
+    // TODO: Figure out how to put all this in ... .
+    const commands$ = config$.pipe(
+      switchMap((config) => {
+        debug(
+          "going to subscribe to command topic %s",
+          config.payload.command_topic
+        );
+        return this.mqtt.subscribe$(config.payload.command_topic).pipe(
+          tap((v) => {
+            debug("command for %s -> %j", id, v);
+          })
+        );
+      })
+    );
 
-        const mqttState$ = commands$
-            .pipe(
-                tap((value) => {
-                    const on = value === 'ON'
+    const mqttState$ = commands$.pipe(
+      tap((value) => {
+        const on = value === "ON";
 
-                    setSubject.next(on)
-                })
-            )
+        setSubject.next(on);
+      })
+    );
 
-        const setSubject = new Subject<boolean>()
+    const setSubject = new Subject<boolean>();
 
-        const set$ = config$
-            .pipe(
-                withLatestFrom(setSubject),
-                switchMap(([ config, value ]) => {
-                    return this.mqtt.publish$(config.payload.state_topic, value ? 'ON' : 'OFF')
-                })
-            )
+    const set$ = config$.pipe(
+      withLatestFrom(setSubject),
+      switchMap(([config, value]) => {
+        return this.mqtt.publish$(
+          config.payload.state_topic,
+          value ? "ON" : "OFF"
+        );
+      })
+    );
 
-        const run$ = merge(advertise$, set$, mqttState$)
+    const run$ = merge(advertise$, set$, mqttState$);
 
-        return new ValueControl<boolean>({
-            id,
-            defaultState,
-            subject: setSubject,
-            run$,
-            emit$: (value: boolean) => {
-                return config$
-                    .pipe(
-                        take(1),
-                        switchMap((config) => {
-                            return this.mqtt.publish$(config.payload.state_topic, value ? 'ON' : 'OFF')
-                                .pipe(tap((v) => debug(v)))
-                        })
-                    )
-            }
-        })
-    }
+    return new ValueControl<boolean>({
+      id,
+      defaultState,
+      subject: setSubject,
+      run$,
+      emit$: (value: boolean) => {
+        return config$.pipe(
+          take(1),
+          switchMap((config) => {
+            return this.mqtt
+              .publish$(config.payload.state_topic, value ? "ON" : "OFF")
+              .pipe(tap((v) => debug(v)));
+          })
+        );
+      },
+    });
+  }
 }

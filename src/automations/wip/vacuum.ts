@@ -1,5 +1,4 @@
-import { EMPTY } from "rxjs"
-import { IServicesCradle } from "../../services/cradle"
+import { EMPTY } from "rxjs";
 
 /*
  * Makes the vacuum clean when nobody is home.
@@ -11,6 +10,6 @@ import { IServicesCradle } from "../../services/cradle"
  *
  * And finally when the bin is full (if I can detect it) or after X cleans it should drive to the trashcan.
  */
-export default function vacuum$(cradle: IServicesCradle) {
-    return EMPTY
+export default function vacuum$() {
+  return EMPTY;
 }

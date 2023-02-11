@@ -1,8 +1,10 @@
+/* eslint @typescript-eslint/no-explicit-any:0 */
+export * from "./local_types";
+
 // This comes from https://github.com/home-assistant/home-assistant-js-websocket/blob/master/lib/types.ts
+export type Error = 1 | 2 | 3 | 4;
 
-type Error = 1 | 2 | 3 | 4;
-
-type UnsubscribeFunc = () => void;
+export type UnsubscribeFunc = () => void;
 
 export type MessageBase = {
   id?: number;
@@ -10,36 +12,33 @@ export type MessageBase = {
   [key: string]: any;
 };
 
-type HassContext = {
-    id: string;
-    user_id: string | null;
-    parent_id: string | null;
-}
-
-type HassEventBase = {
-  origin: string;
-  time_fired: string;
-  context: HassContext;
+export type Context = {
+  id: string;
+  user_id: string | null;
+  parent_id: string | null;
 };
 
-type HassEvent = HassEventBase & {
+export type HassEventBase = {
+  origin: string;
+  time_fired: string;
+  context: Context;
+};
+
+export type HassEvent = HassEventBase & {
   event_type: string;
   data: { [key: string]: any };
 };
 
-type StateChangedEvent = HassEventBase & {
+export type StateChangedEvent = HassEventBase & {
   event_type: "state_changed";
-  data: StateChangedEventData;
+  data: {
+    entity_id: string;
+    new_state: HassEntity | null;
+    old_state: HassEntity | null;
+  };
 };
 
-export type StateChangedEventData = {
-  entity_id: string;
-  new_state: HassEntity | null;
-  old_state: HassEntity | null;
-  context: HassContext;
-};
-
- type HassConfig = {
+export type HassConfig = {
   latitude: number;
   longitude: number;
   elevation: number;
@@ -48,6 +47,9 @@ export type StateChangedEventData = {
     mass: string;
     volume: string;
     temperature: string;
+    pressure: string;
+    wind_speed: string;
+    accumulated_precipitation: string;
   };
   location_name: string;
   time_zone: string;
@@ -61,6 +63,9 @@ export type StateChangedEventData = {
   state: "NOT_RUNNING" | "STARTING" | "RUNNING" | "STOPPING" | "FINAL_WRITE";
   external_url: string | null;
   internal_url: string | null;
+  currency: string;
+  country: string | null;
+  language: string;
 };
 
 export type HassEntityBase = {
@@ -69,10 +74,10 @@ export type HassEntityBase = {
   last_changed: string;
   last_updated: string;
   attributes: HassEntityAttributeBase;
-  context: { id: string; user_id: string | null };
+  context: Context;
 };
 
-type HassEntityAttributeBase = {
+export type HassEntityAttributeBase = {
   friendly_name?: string;
   unit_of_measurement?: string;
   icon?: string;
@@ -81,41 +86,41 @@ type HassEntityAttributeBase = {
   hidden?: boolean;
   assumed_state?: boolean;
   device_class?: string;
-  state_class?: string; // measurement
-  // catch-all for attributes ... .
-  [key: string]: any;
+  state_class?: string;
+  restored?: boolean;
 };
 
-type HassEntity = HassEntityBase & {
+export type HassEntity = HassEntityBase & {
   attributes: { [key: string]: any };
 };
 
-type HassEntities = { [entity_id: string]: HassEntity };
+export type HassEntities = { [entity_id: string]: HassEntity };
 
-type HassService = {
+export type HassService = {
   name?: string;
   description: string;
-  target?: HassServiceTarget | null;
+  target?: object | null;
   fields: {
     [field_name: string]: {
       name?: string;
       description: string;
       example: string | boolean | number;
-      selector?: Record<string, unknown>;
+      selector?: object;
     };
   };
 };
 
-type HassDomainServices = {
+export type HassDomainServices = {
   [service_name: string]: HassService;
 };
 
-type HassServices = {
+export type HassServices = {
   [domain: string]: HassDomainServices;
 };
 
-type HassUser = {
+export type HassUser = {
   id: string;
+  is_admin: boolean;
   is_owner: boolean;
   name: string;
 };
@@ -125,8 +130,3 @@ export type HassServiceTarget = {
   device_id?: string | string[];
   area_id?: string | string[];
 };
-
-export type SensorConfig = {
-  type: 'binary';
-  name?: string;
-}

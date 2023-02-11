@@ -1,5 +1,4 @@
-import { EMPTY } from "rxjs"
-import { IServicesCradle } from "../../services/cradle"
+import { EMPTY } from "rxjs";
 
 /*
  * Detects when it is dark outside.
@@ -7,6 +6,6 @@ import { IServicesCradle } from "../../services/cradle"
  *
  * It exposes an input boolean.
  */
-export default function outsideBrightness$(cradle: IServicesCradle) {
-    return EMPTY
+export default function outsideBrightness$() {
+  return EMPTY;
 }

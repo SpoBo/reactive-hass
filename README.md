@@ -12,8 +12,17 @@ Contains helpers to easily work with reactive streams and make decisions based o
 
 # TODO
 
+Install prettier.
+
 Clear command to wipe mqtt from all things reactive-hass.
 
-Create a sensors folder. Which should not have access to run commands. But it should be used to combine streams into new sensors. So we could for example combine a set of sensors to know if the house should have its alarm on or not. Or if it is sufficiently dark to warrant mood lighting etc.
+Support non-binary sensors.
 
 Provide a way to automatically inject config for sensors/automations.
+
+Swap DI containers.
+- Should have no way to mutate stuff in sensors
+- Should give access in automations to sensors.
+- Should give access to other sensors in sensors.
+
+Allow easy loading of sensors from the sensor folder in other sensors or in automations.
