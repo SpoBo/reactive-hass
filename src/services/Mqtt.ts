@@ -1,6 +1,6 @@
 import DEBUG from "debug";
 
-import { connect, IClientPublishOptions, IPubrecPacket } from "mqtt";
+import { connect, IClientPublishOptions, IPublishPacket } from "mqtt";
 import ms from "ms";
 
 import { concat, Observable, fromEvent, Subject, EMPTY, merge, of } from "rxjs";
@@ -17,14 +17,14 @@ import Config from "./Config";
 import { IServicesCradle } from "./cradle";
 
 export interface ISimplifiedMqttClient {
-  message$: Observable<[string, Buffer, IPubrecPacket]>;
+  message$: Observable<[string, Buffer, IPublishPacket]>;
   subscribe$: ({ topic }: { topic: string }) => Observable<unknown>;
   publish$: ({
     topic,
     payload,
     options,
   }: // TODO: Improve output type of MQTT Client.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   {
     topic: string;
     payload: string | Buffer;

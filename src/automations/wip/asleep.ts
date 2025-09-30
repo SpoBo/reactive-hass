@@ -12,9 +12,9 @@ import {
   filter,
   withLatestFrom,
 } from "rxjs/operators";
-import { AutomationOptions } from ".";
-import inTimeRange from "../helpers/inTimeRange";
-import { IServicesCradle } from "../services/cradle";
+import { AutomationOptions } from "../index";
+import inTimeRange from "../../helpers/inTimeRange";
+import { IServicesCradle } from "../../services/cradle";
 
 function inTimeRange$(start: string, stop: string): Observable<boolean> {
   const check = inTimeRange(start, stop);
@@ -44,9 +44,9 @@ export default function (
   const { states, notify } = services;
 
   // TODO: Add this via some kind of config.
-  const pluggedIn$ = states.entity$("binary_sensor.mi_9t_pro_is_charging").pipe(
+  const pluggedIn$ = states.entity$("sensor.vincents_iphone_battery_state").pipe(
     pluck("state"),
-    map((v) => v === "on")
+    map((v) => v === "Charging")
   );
 
   const definitelySleeping$ = of(false); // inTimeRange$('00:30', '05:00')
