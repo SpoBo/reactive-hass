@@ -23,11 +23,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run prettier` - Check code formatting
 - `npm run prettier:fix` - Auto-fix formatting
 - `npm run format` - Run both prettier and lint fixes
-- `npm run validate` - Run full validation (build app, build:test, lint, test) - run before pushing
+- `npm run validate` - Run full validation (typecheck, typecheck:test, lint, test) - run before pushing
 
-### Build
-- `npm run build` - Compile TypeScript app code to `dist/` directory
-- `npm run build:test` - Type-check test files (no output, noEmit)
+### Type Checking
+- `npm run typecheck` - Type-check app code and output to `dist/` directory
+- `npm run typecheck:test` - Type-check test files (no output, noEmit)
 
 ### Running Specific Automation
 Set the `RUN` environment variable to run only a specific automation:
