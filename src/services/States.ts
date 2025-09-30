@@ -5,14 +5,17 @@ import { IServicesCradle } from "./cradle";
 import { HassEntityBase } from "../types";
 import Events from "./Events";
 import Socket from "./Socket";
+import Rest from "./Rest";
 
 export default class States {
   socket: Socket;
   events: Events;
+  rest: Rest;
 
-  constructor(dependencies: IServicesCradle) {
-    this.socket = dependencies.socket;
-    this.events = dependencies.events;
+  constructor({ socket, events, rest }: { socket: Socket, events: Events, rest: Rest }) {
+    this.socket = socket;
+    this.events = events;
+    this.rest = rest;
   }
 
   /**
@@ -23,10 +26,12 @@ export default class States {
   }
 
   private updatesForEntityId$(entityId: string): Observable<HassEntityBase> {
-    return this.events.stateChanged$.pipe(
+    const realtime$ = this.events.stateChanged$.pipe(
       filter((v) => v.entity_id === entityId),
       map((v) => v.new_state as HassEntityBase)
     );
+
+    return realtime$;
   }
 
   entity$(entityId: string): Observable<HassEntityBase> {

@@ -11,6 +11,8 @@ import Notify from "./Notify";
 import HassStatus from "./HassStatus";
 import BinarySensor from "./BinarySensor";
 import Discovery from "./Discovery";
+import Rest from "./Rest";
+import History from "./History";
 
 export interface IServicesCradle {
   config: Config;
@@ -19,6 +21,8 @@ export interface IServicesCradle {
   events: Events;
   service: Service;
   mqtt: Mqtt;
+  rest: Rest;
+  history: History;
   discovery: Discovery;
   discoverySwitch: DiscoverySwitch;
   notify: Notify;
@@ -39,6 +43,8 @@ container.register({
   events: asClass(Events, { lifetime: "SINGLETON" }),
   service: asClass(Service, { lifetime: "SINGLETON" }),
   mqtt: asClass(Mqtt, { lifetime: "SINGLETON" }),
+  rest: asClass(Rest, { lifetime: "SINGLETON" }),
+  history: asClass(History, { lifetime: "SINGLETON" }),
   discovery: asClass(Discovery, { lifetime: "SINGLETON" }),
   discoverySwitch: asClass(DiscoverySwitch, { lifetime: "SINGLETON" }),
   notify: asClass(Notify, { lifetime: "SINGLETON" }),

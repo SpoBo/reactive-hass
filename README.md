@@ -12,9 +12,9 @@ Contains helpers to easily work with reactive streams and make decisions based o
 
 # TODO
 
-Install prettier.
-
 Clear command to wipe mqtt from all things reactive-hass.
+
+Make sensors emit a certainty level.
 
 Support non-binary sensors.
 
@@ -26,4 +26,16 @@ Swap DI containers.
 - Should give access to other sensors in sensors.
 https://github.com/microsoft/tsyringe ?
 
-Allow easy loading of sensors from the sensor folder in other sensors or in automations.
+Allow easy loading of sensors from the sensor folder in other sensors or in automations. (could just do it through HASS though ... .)
+
+
+# AUTOMATION WISHLIST
+
+* when gaming
+  * change mood lighting if dark enough
+  * disable / throttle download speeds
+* energy
+  * give insights at end of power generation
+* warn when door opens and nobody is home
+
+https://www.npmjs.com/package/qbittorrent-api-v2

@@ -28,6 +28,7 @@
         "awilix": "^8.0.0",
         "convict": "^6.2.4",
         "convict-format-with-validator": "^6.2.0",
+        "date-fns": "^2.29.3",
         "debug": "^4.3.4",
         "glob-to-regexp": "^0.4.1",
         "js-yaml": "^4.1.0",
