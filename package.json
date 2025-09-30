@@ -13,12 +13,13 @@
         "format": "npm run prettier:fix && npm run lint:fix",
         "build": "tsc",
         "typecheck:test": "tsc --project tsconfig.test.json --noEmit",
+        "typecheck:watch": "tsc --noEmit --watch",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:ui": "vitest --ui",
         "test:coverage": "vitest run --coverage",
         "validate": "npm run build && npm run typecheck:test && npm run lint && npm run test",
-        "start": "CHOKIDAR_USEPOLLING=true CONFIG_PATH=./config.yaml ts-node-dev --respawn --ignore-watch ./data/ -- ./src/index.ts",
+        "start": "CONFIG_PATH=./config.yaml tsx watch --ignore ./data/ ./src/index.ts",
         "start:debug": "DEBUG=reactive-hass.* npm run start",
         "start:prod": "NODE_ENV=production node ./dist/index.js"
     },
@@ -57,7 +58,7 @@
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-vitest": "^0.5.4",
         "prettier": "^3.6.2",
-        "ts-node-dev": "^2.0.0",
+        "tsx": "^4.20.6",
         "typescript": "^5.9.2",
         "vitest": "^3.2.4"
     }
