@@ -1,7 +1,7 @@
 import DEBUG from "debug";
 import { merge, timer } from "rxjs";
 
-import { catchError, switchMapTo, tap } from "rxjs/operators";
+import { catchError, switchMap, tap } from "rxjs/operators";
 
 import sensors$ from "./sensors/index";
 import automations$ from "./automations/index";
@@ -28,7 +28,7 @@ process$
     catchError((e, obs$) => {
       console.error("process errored", e);
 
-      return timer(5000).pipe(switchMapTo(obs$));
+      return timer(5000).pipe(switchMap(() => obs$));
     })
   )
   .subscribe({
