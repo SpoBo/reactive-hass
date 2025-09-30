@@ -1,7 +1,7 @@
 const eslint = require('@eslint/js');
 const tseslint = require('@typescript-eslint/eslint-plugin');
 const tsparser = require('@typescript-eslint/parser');
-const jest = require('eslint-plugin-jest');
+const vitest = require('eslint-plugin-vitest');
 const prettierConfig = require('eslint-config-prettier');
 
 module.exports = [
@@ -39,19 +39,19 @@ module.exports = [
 	{
 		files: ['src/**/*.test.ts'],
 		plugins: {
-			jest,
+			vitest,
 		},
 		languageOptions: {
 			globals: {
-				...jest.environments.globals.globals,
+				...vitest.environments.env.globals,
 			},
 		},
 		rules: {
-			...jest.configs.recommended.rules,
+			...vitest.configs.recommended.rules,
 		},
 	},
 	prettierConfig,
 	{
-		ignores: ['dist/', 'node_modules/', 'coverage/', 'jest.config.js', 'src/jest.config.js', '**/*.config.js'],
+		ignores: ['dist/', 'node_modules/', 'coverage/', '**/*.config.js', '**/*.config.ts'],
 	},
 ];

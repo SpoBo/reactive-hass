@@ -14,17 +14,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run start:prod` - Run production build
 
 ### Testing & Quality
-- `npm test` - Run all tests
+- `npm test` - Run all tests (Vitest)
 - `npm run test:watch` - Run tests in watch mode
+- `npm run test:ui` - Run tests with Vitest UI
+- `npm run test:coverage` - Run tests with coverage report
 - `npm run lint` - Check TypeScript code
 - `npm run lint:fix` - Auto-fix lint issues
 - `npm run prettier` - Check code formatting
 - `npm run prettier:fix` - Auto-fix formatting
 - `npm run format` - Run both prettier and lint fixes
-- `npm run validate` - Run build, lint, and test suite
+- `npm run validate` - Run full validation (build app, build:test, lint, test) - run before pushing
 
 ### Build
-- `npm run build` - Compile TypeScript to `dist/` directory
+- `npm run build` - Compile TypeScript app code to `dist/` directory
+- `npm run build:test` - Type-check test files (no output, noEmit)
 
 ### Running Specific Automation
 Set the `RUN` environment variable to run only a specific automation:
@@ -150,9 +153,9 @@ Both sensors and automations use `require-dir` for automatic loading:
 
 ## Development Notes
 
-- Uses Node 18 (Volta config in package.json)
-- TypeScript 4.9 with strict mode enabled
+- Uses Node 22 (Volta config in package.json)
+- TypeScript 5.9 with strict mode enabled
 - RxJS 7 for reactive streams
 - Debug logging uses `debug` package with namespace pattern `reactive-hass.*`
-- Tests use Jest with ts-jest preset
+- Tests use Vitest with globals enabled
 - EventEmitter max listeners set to Infinity due to RxJS listener buildup
