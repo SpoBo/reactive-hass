@@ -24,6 +24,9 @@ export default class History {
     return raw$.pipe(
       map((result) => {
         debug(`history for ${id}`, result)
+        if (!result || !result[0]) {
+          return [];
+        }
         return result[0].filter(v => v.entity_id === id);
       }),
     );

@@ -4,7 +4,7 @@ import { map } from "rxjs/operators";
 import { IServicesCradle } from "../services/cradle";
 import { SensorConfig } from "../types";
 
-const DOWNSTAIRS_MOTION_SENSORS = ['binary_sensor.lumi_lumi_sensor_motion_aq2_occupancy'] as const;
+const DOWNSTAIRS_MOTION_SENSORS = ['binary_sensor.storage_motion_sensor'] as const;
 
 // TODO: keep bedtime into account! Since then we are no longer awake.
 // TODO: Need to have a timerange that updates for every day which tells us when to expect activity
