@@ -1,8 +1,11 @@
 import Config from "./Config";
 import { IServicesCradle } from "./cradle";
 import { Observable } from "rxjs";
-import { map, switchMapTo } from "rxjs/operators";
+import { map, switchMapTo, tap } from "rxjs/operators";
 import HassStatus from "./HassStatus";
+import DEBUG from "debug";
+
+const debug = DEBUG("reactive-hass.discovery");
 
 type DiscoveryDevice = {
   model: string;
@@ -53,14 +56,18 @@ export default class Discovery {
           .filter((v) => v)
           .join("-");
 
+        const objectId = `${config.objectId}_${id}`;
         const root = `${config.mqttDiscoveryPrefix}/${categoryName}/${uniqueId}`;
+
+        debug(`Creating discovery for ${categoryName}/${id} with object_id: ${objectId}`);
+
         return {
           topics: {
             root,
             config: `${root}/config`,
           },
           payload: {
-            object_id: config.objectId,
+            object_id: objectId,
             unique_id: uniqueId,
             state_topic: `${root}/state`,
             name: options?.name ?? id,

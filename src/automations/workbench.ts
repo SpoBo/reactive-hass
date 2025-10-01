@@ -44,7 +44,7 @@ export default function test$(
     );
 
   const stuff: Observable<any>[] = [
-    intervalOnBinarySensor$,
+    // intervalOnBinarySensor$,
     //cradle.states.all$,
     //cradle.states.entity$('light.atmosphere_lamp'),
     /*

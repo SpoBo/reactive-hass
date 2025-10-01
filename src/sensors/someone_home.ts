@@ -7,7 +7,7 @@ import { SensorOptions } from "./index";
 const OCCUPANTS = ["person.vincent", "person.marife"];
 
 /**
- * Controls if someone is home or not.
+ * Exposes if someone is home or not.
  */
 export default function (services: IServicesCradle, { debug }: SensorOptions) {
   // TODO: We can extract this to a helper ...

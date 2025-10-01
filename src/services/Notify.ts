@@ -21,7 +21,7 @@ export default class Notify {
     debug("notifying:", message);
     return this.service.call$({
       domain: "notify",
-      service: "mobile_app_mi_9t_pro",
+      service: "mobile_app_vincents_iphone",
       service_data: {
         message,
       },
