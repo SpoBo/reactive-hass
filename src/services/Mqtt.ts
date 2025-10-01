@@ -24,7 +24,7 @@ export interface ISimplifiedMqttClient {
     payload,
     options,
   }: // TODO: Improve output type of MQTT Client.
-   
+
   {
     topic: string;
     payload: string | Buffer;

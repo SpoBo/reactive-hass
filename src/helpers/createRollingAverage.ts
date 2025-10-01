@@ -19,5 +19,10 @@ export function createRollingAverage$(
   windowSize: number | string
 ): Observable<number> {
   const windowMs = typeof windowSize === "string" ? ms(windowSize) : windowSize;
-  return source$.pipe(rollingAverage(windowMs), map((v) => Math.floor(v)), distinctUntilChanged(), share());
+  return source$.pipe(
+    rollingAverage(windowMs),
+    map((v) => Math.floor(v)),
+    distinctUntilChanged(),
+    share()
+  );
 }

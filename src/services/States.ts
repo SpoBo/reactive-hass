@@ -12,7 +12,15 @@ export default class States {
   events: Events;
   rest: Rest;
 
-  constructor({ socket, events, rest }: { socket: Socket, events: Events, rest: Rest }) {
+  constructor({
+    socket,
+    events,
+    rest,
+  }: {
+    socket: Socket;
+    events: Events;
+    rest: Rest;
+  }) {
     this.socket = socket;
     this.events = events;
     this.rest = rest;

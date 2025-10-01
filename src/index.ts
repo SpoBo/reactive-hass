@@ -13,7 +13,7 @@ const debug = DEBUG("reactive-hass.index");
 
 // NOTE: This is not ideal. But using RxJS causes a lot of listeners to build up at once.
 //       I should hunt down where exactly the issue is. Perhaps it could be avoided by sharing.
- 
+
 require("events").EventEmitter.defaultMaxListeners = Infinity;
 
 const process$ = merge(sensors$, automations$).pipe(

@@ -27,7 +27,11 @@ describe("createRollingAverage$", () => {
       // a: avg of [10] = 10
       // b at 100ms: avg of [10, 20] = 15
       // c at 200ms: avg of [10, 20, 30] = 20
-      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 15, c: 20 });
+      expectObservable(result$).toBe("a 99ms b 99ms c|", {
+        a: 10,
+        b: 15,
+        c: 20,
+      });
     });
   });
 
@@ -50,7 +54,11 @@ describe("createRollingAverage$", () => {
       // a at 0ms: avg of [10] = 10
       // b at 999ms: avg of [10, 20] = 15
       // c at 1998ms: only b and c are within 1000ms window, avg of [20, 30] = 25
-      expectObservable(result$).toBe("a 999ms b 999ms c|", { a: 10, b: 15, c: 25 });
+      expectObservable(result$).toBe("a 999ms b 999ms c|", {
+        a: 10,
+        b: 15,
+        c: 25,
+      });
     });
   });
 
@@ -70,7 +78,11 @@ describe("createRollingAverage$", () => {
       const result$ = createRollingAverage$(source$, "1s");
 
       // "1s" = 1000ms, same as numeric 1000
-      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 15, c: 20 });
+      expectObservable(result$).toBe("a 99ms b 99ms c|", {
+        a: 10,
+        b: 15,
+        c: 20,
+      });
     });
   });
 });

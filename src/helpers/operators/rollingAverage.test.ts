@@ -27,7 +27,11 @@ describe("rollingAverage", () => {
       // a: avg of [10] = 10
       // b at 100ms: avg of [10, 20] = 15
       // c at 200ms: avg of [10, 20, 30] = 20
-      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 15, c: 20 });
+      expectObservable(result$).toBe("a 99ms b 99ms c|", {
+        a: 10,
+        b: 15,
+        c: 20,
+      });
     });
   });
 
@@ -50,7 +54,11 @@ describe("rollingAverage", () => {
       // a at 0ms: avg of [10] = 10
       // b at 999ms: avg of [10, 20] = 15
       // c at 1998ms: only b and c are within 1000ms window, avg of [20, 30] = 25
-      expectObservable(result$).toBe("a 999ms b 999ms c|", { a: 10, b: 15, c: 25 });
+      expectObservable(result$).toBe("a 999ms b 999ms c|", {
+        a: 10,
+        b: 15,
+        c: 25,
+      });
     });
   });
 
@@ -60,7 +68,11 @@ describe("rollingAverage", () => {
       const result$ = source$.pipe(rollingAverage(1000));
 
       // Unlike createRollingAverage$, this operator doesn't filter duplicates
-      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 10, c: 10 });
+      expectObservable(result$).toBe("a 99ms b 99ms c|", {
+        a: 10,
+        b: 10,
+        c: 10,
+      });
     });
   });
 
@@ -72,7 +84,11 @@ describe("rollingAverage", () => {
       // a at 0ms: avg of [10] = 10
       // b at 100ms: a and b are both within 100ms window (0-100), avg of [10, 20] = 15
       // c at 200ms: b and c are both within 100ms window (100-200), avg of [20, 30] = 25
-      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 15, c: 25 });
+      expectObservable(result$).toBe("a 99ms b 99ms c|", {
+        a: 10,
+        b: 15,
+        c: 25,
+      });
     });
   });
 });

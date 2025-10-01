@@ -10,7 +10,7 @@ export default function gaming$(
 ): Observable<string | boolean> {
   return cradle.states.entity$("sensor.ps5_750_activity").pipe(
     map((v) => {
-      return v.state === 'playing';
+      return v.state === "playing";
     })
   );
 }

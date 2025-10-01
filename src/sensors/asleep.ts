@@ -28,16 +28,16 @@ function inTimeRange$(start: string, stop: string): Observable<boolean> {
  * TODO: Also check if there was some upstairs motion a little bit before plugging in.
  * That way we know it with a little bit more certainty.
  */
-export default function asleep$(
-  cradle: IServicesCradle
-): Observable<boolean> {
+export default function asleep$(cradle: IServicesCradle): Observable<boolean> {
   const { states } = cradle;
 
   // TODO: Add this via some kind of config.
-  const pluggedIn$ = states.entity$("sensor.vincents_iphone_battery_state").pipe(
-    pluck("state"),
-    map((v) => v === "Charging")
-  );
+  const pluggedIn$ = states
+    .entity$("sensor.vincents_iphone_battery_state")
+    .pipe(
+      pluck("state"),
+      map((v) => v === "Charging")
+    );
 
   const definitelySleeping$ = of(false); // inTimeRange$('00:30', '05:00')
   const mightBeGoingToSleep$ = inTimeRange$("21:30", "04:00");

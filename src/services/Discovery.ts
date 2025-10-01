@@ -59,7 +59,9 @@ export default class Discovery {
         const objectId = `${config.objectId}_${id}`;
         const root = `${config.mqttDiscoveryPrefix}/${categoryName}/${uniqueId}`;
 
-        debug(`Creating discovery for ${categoryName}/${id} with object_id: ${objectId}`);
+        debug(
+          `Creating discovery for ${categoryName}/${id} with object_id: ${objectId}`
+        );
 
         return {
           topics: {

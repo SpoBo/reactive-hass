@@ -24,13 +24,16 @@ export function rollingAverage(windowSize: number) {
       // Add timestamp to each value using RxJS's timestamp operator
       timestamp(),
       // Maintain array of values within the time window
-      scan((acc, curr) => {
-        // Add current value
-        const updated = [...acc, curr];
-        // Filter out values older than window size
-        const cutoffTime = curr.timestamp - windowSize;
-        return updated.filter((item) => item.timestamp >= cutoffTime);
-      }, [] as Array<{ value: number; timestamp: number }>),
+      scan(
+        (acc, curr) => {
+          // Add current value
+          const updated = [...acc, curr];
+          // Filter out values older than window size
+          const cutoffTime = curr.timestamp - windowSize;
+          return updated.filter((item) => item.timestamp >= cutoffTime);
+        },
+        [] as Array<{ value: number; timestamp: number }>
+      ),
       // Calculate average
       map((values) => {
         if (values.length === 0) return 0;
