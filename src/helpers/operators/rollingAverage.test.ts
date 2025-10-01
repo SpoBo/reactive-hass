@@ -1,7 +1,7 @@
 import { TestScheduler } from "rxjs/testing";
-import { createRollingAverage$ } from "./createRollingAverage";
+import { rollingAverage } from "./rollingAverage";
 
-describe("createRollingAverage$", () => {
+describe("rollingAverage", () => {
   let testScheduler: TestScheduler;
 
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe("createRollingAverage$", () => {
   it("should emit average immediately for single value", () => {
     testScheduler.run(({ cold, expectObservable }) => {
       const source$ = cold("a|", { a: 10 });
-      const result$ = createRollingAverage$(source$, 1000);
+      const result$ = source$.pipe(rollingAverage(1000));
 
       expectObservable(result$).toBe("a|", { a: 10 });
     });
@@ -22,7 +22,7 @@ describe("createRollingAverage$", () => {
   it("should calculate rolling average as values arrive", () => {
     testScheduler.run(({ cold, expectObservable }) => {
       const source$ = cold("a 99ms b 99ms c|", { a: 10, b: 20, c: 30 });
-      const result$ = createRollingAverage$(source$, 1000);
+      const result$ = source$.pipe(rollingAverage(1000));
 
       // a: avg of [10] = 10
       // b at 100ms: avg of [10, 20] = 15
@@ -34,7 +34,7 @@ describe("createRollingAverage$", () => {
   it("should drop old values outside the window", () => {
     testScheduler.run(({ cold, expectObservable }) => {
       const source$ = cold("a 1001ms b|", { a: 10, b: 20 });
-      const result$ = createRollingAverage$(source$, 1000);
+      const result$ = source$.pipe(rollingAverage(1000));
 
       // a: avg of [10] = 10
       // b at 1001ms: value 'a' is now outside 1000ms window, avg of [20] = 20
@@ -45,7 +45,7 @@ describe("createRollingAverage$", () => {
   it("should keep values within the sliding window", () => {
     testScheduler.run(({ cold, expectObservable }) => {
       const source$ = cold("a 999ms b 999ms c|", { a: 10, b: 20, c: 30 });
-      const result$ = createRollingAverage$(source$, 1000);
+      const result$ = source$.pipe(rollingAverage(1000));
 
       // a at 0ms: avg of [10] = 10
       // b at 999ms: avg of [10, 20] = 15
@@ -54,23 +54,25 @@ describe("createRollingAverage$", () => {
     });
   });
 
-  it("should filter duplicate consecutive averages", () => {
+  it("should emit all values including duplicates", () => {
     testScheduler.run(({ cold, expectObservable }) => {
       const source$ = cold("a 99ms b 99ms c|", { a: 10, b: 10, c: 10 });
-      const result$ = createRollingAverage$(source$, 1000);
+      const result$ = source$.pipe(rollingAverage(1000));
 
-      // All emissions are 10, filtered by distinctUntilChanged
-      expectObservable(result$).toBe("a 200ms |", { a: 10 });
+      // Unlike createRollingAverage$, this operator doesn't filter duplicates
+      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 10, c: 10 });
     });
   });
 
-  it("should accept string time format using ms utility", () => {
+  it("should handle different window sizes", () => {
     testScheduler.run(({ cold, expectObservable }) => {
       const source$ = cold("a 99ms b 99ms c|", { a: 10, b: 20, c: 30 });
-      const result$ = createRollingAverage$(source$, "1s");
+      const result$ = source$.pipe(rollingAverage(100));
 
-      // "1s" = 1000ms, same as numeric 1000
-      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 15, c: 20 });
+      // a at 0ms: avg of [10] = 10
+      // b at 100ms: a and b are both within 100ms window (0-100), avg of [10, 20] = 15
+      // c at 200ms: b and c are both within 100ms window (100-200), avg of [20, 30] = 25
+      expectObservable(result$).toBe("a 99ms b 99ms c|", { a: 10, b: 15, c: 25 });
     });
   });
 });

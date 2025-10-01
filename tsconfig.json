@@ -13,6 +13,11 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
 
+    "baseUrl": ".",
+    "paths": {
+      "@operators/*": ["src/helpers/operators/*"]
+    },
+
     "types": ["vitest/globals"]
   },
   "include": ["src/**/*"],

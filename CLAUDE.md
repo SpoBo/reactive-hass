@@ -157,6 +157,129 @@ Both sensors and automations use `require-dir` for automatic loading:
 - Export a default function with the correct signature
 - It will be auto-discovered and loaded on startup
 
+## Testing RxJS Observables
+
+This project uses **RxJS marble testing** with Vitest for testing observable streams.
+
+### Key Principles
+
+1. **Use RxJS's TestScheduler** - Don't pass scheduler instances to operators
+2. **Use built-in operators** - Operators like `timestamp()` work automatically with TestScheduler's virtual time
+3. **Follow RxJS testing patterns** - Refer to [RxJS's own specs](https://github.com/ReactiveX/rxjs/tree/master/packages/rxjs/spec/operators) for examples
+
+### Test Structure
+
+```typescript
+import { TestScheduler } from "rxjs/testing";
+
+describe("myOperator", () => {
+  let testScheduler: TestScheduler;
+
+  beforeEach(() => {
+    testScheduler = new TestScheduler((actual, expected) => {
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  it("should do something", () => {
+    testScheduler.run(({ cold, expectObservable }) => {
+      const source$ = cold("a 99ms b|", { a: 10, b: 20 });
+      const result$ = source$.pipe(myOperator());
+
+      expectObservable(result$).toBe("a 99ms b|", { a: 10, b: 20 });
+    });
+  });
+});
+```
+
+### Marble Diagram Syntax
+
+- `a`, `b`, `c` - Emissions (values defined in object)
+- `|` - Completion
+- `#` - Error
+- `-` - 1 frame of time (10ms in virtual time)
+- `99ms` - Explicit time duration
+- `(ab)` - Synchronous group (emissions on same frame)
+- Space - Just for readability, has no timing meaning
+
+**Important:** Operators add 1 frame of processing time in TestScheduler. When source completes at frame 200, result might complete at frame 201 due to operator pipeline overhead.
+
+### Common Patterns
+
+**Testing time-based operators:**
+```typescript
+// Don't pass scheduler to operators - use built-in time operators
+source$.pipe(
+  timestamp(),  // Works with TestScheduler automatically
+  debounceTime(100),
+  delay(50)
+)
+```
+
+**Testing sliding windows:**
+```typescript
+const source$ = cold("a 999ms b 999ms c|", { a: 10, b: 20, c: 30 });
+// At 0ms: [a]
+// At 999ms: [a, b] (both within window)
+// At 1998ms: [b, c] (a dropped, outside window)
+```
+
+**Testing distinct emissions:**
+```typescript
+const source$ = cold("a b c|", { a: 10, b: 10, c: 10 });
+const result$ = source$.pipe(distinctUntilChanged());
+// Emits only first 10, then completes
+expectObservable(result$).toBe("a 2ms |", { a: 10 });
+```
+
+### ESLint Configuration
+
+Configure `vitest/expect-expect` to recognize marble testing assertions:
+
+```javascript
+// eslint.config.js
+{
+  files: ['src/**/*.test.ts'],
+  rules: {
+    'vitest/expect-expect': ['warn', {
+      assertFunctionNames: ['expect', 'expectObservable'],
+    }],
+  },
+}
+```
+
+### What NOT to Do
+
+❌ Don't pass `scheduler` parameter to operators:
+```typescript
+// Wrong - scheduler manually passed
+scan((acc, curr) => [...acc, curr], [], scheduler)
+timestamp(scheduler)
+```
+
+✅ Instead, rely on TestScheduler's automatic virtual time:
+```typescript
+// Correct - operators use TestScheduler's time automatically
+scan((acc, curr) => [...acc, curr], [])
+timestamp()
+```
+
+❌ Don't use `bufferTime` with TestScheduler - it has known issues with virtual time and requires sources to complete
+
+✅ Use `scan` + `timestamp()` for sliding windows instead
+
+### Path Aliases
+
+Import custom operators using `@operators/*` alias:
+```typescript
+import { rollingAverage } from "@operators/rollingAverage";
+```
+
+Configured in:
+- `tsconfig.json`, `tsconfig.build.json`, `tsconfig.test.json` - TypeScript path mapping
+- `vitest.config.ts` - Vitest resolve aliases
+- `src/index.ts` - `tsconfig-paths/register` for runtime resolution
+
 ## Development Notes
 
 - Uses Node 22 (Volta config in package.json)

@@ -36,7 +36,7 @@ export default function (
 
     // Create a rolling average of the power usage.
     // But make sure to instantly start outputting values.
-    const rollingAverage$ = createRollingAverage$(powerUsage$, ms("10s"))
+    const rollingAverage$ = createRollingAverage$(powerUsage$, "10s")
     .pipe(
         tap((v) => debug("rollingAverage:", v)),
     );
