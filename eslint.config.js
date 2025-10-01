@@ -48,6 +48,12 @@ module.exports = [
 		},
 		rules: {
 			...vitest.configs.recommended.rules,
+			'vitest/expect-expect': [
+				'warn',
+				{
+					assertFunctionNames: ['expect', 'expectObservable'],
+				},
+			],
 		},
 	},
 	prettierConfig,

@@ -25,9 +25,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run format` - Run both prettier and lint fixes
 - `npm run validate` - Run full validation (typecheck, typecheck:test, lint, test) - run before pushing
 
-### Type Checking
-- `npm run typecheck` - Type-check app code and output to `dist/` directory
-- `npm run typecheck:test` - Type-check test files (no output, noEmit)
+### Type Checking & Building
+- `npm run typecheck` - Type-check all source files (including tests) with noEmit
+- `npm run typecheck:test` - Type-check test files specifically
+- `npm run build` - Build production code (excludes tests) to `dist/` directory
+
+Note: The project uses three TypeScript configs:
+- `tsconfig.json` - IDE config with vitest globals, includes all files
+- `tsconfig.build.json` - Production build, excludes tests
+- `tsconfig.test.json` - Test-specific type checking
 
 ### Running Specific Automation
 Set the `RUN` environment variable to run only a specific automation:
