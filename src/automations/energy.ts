@@ -1,4 +1,12 @@
-import { combineLatest, EMPTY, Observable, timer, interval, merge, BehaviorSubject } from "rxjs";
+import {
+  combineLatest,
+  EMPTY,
+  Observable,
+  timer,
+  interval,
+  merge,
+  BehaviorSubject,
+} from "rxjs";
 import {
   map,
   distinctUntilChanged,
@@ -11,7 +19,7 @@ import {
   filter,
   withLatestFrom,
   take,
-  scan,
+  shareReplay,
 } from "rxjs/operators";
 import { AutomationOptions } from "./index";
 import { IServicesCradle } from "../services/cradle";
@@ -19,7 +27,6 @@ import ms from "ms";
 import { createRollingAverage$ } from "../helpers/createRollingAverage";
 import { CHARGING_CONFIG } from "./charging/config";
 import {
-  calculateHouseBaseLoad,
   calculateSolarOverhead,
   canStartCharging,
   shouldStopCharging,
@@ -30,13 +37,23 @@ import {
 const REALTIME_POLL_INTERVAL = "30s";
 
 /**
- * Constantly monitor how much energy we are using and potentially start / stop certain services.
- * Like charge the car etc.
+ * Solar-powered Tesla charging automation.
  *
- * The idea is that we will have a priority mechanism based on some configuration.
+ * Monitors solar production and automatically controls Tesla charging to maximize
+ * the use of excess solar power. Dynamically adjusts charging amperage (5-13A)
+ * based on available solar overhead.
+ *
+ * Key features:
+ * - Event-driven architecture with three decision streams (start/adjust/stop)
+ * - Optimistic state management to eliminate command lag
+ * - Conditional BLE polling (only when charging) to allow car sleep
+ * - Multiple rolling averages (3m for start/stop, 30s for adjustments)
+ * - Layered data sources: optimistic → BLE → MQTT
+ *
+ * See ENERGY_README.md for detailed architecture and design decisions.
  */
 export default function (
-  { states, notify, teslaBle, teslamateMqtt, homeWizardP1 }: IServicesCradle,
+  { notify, teslaBle, teslamateMqtt, homeWizardP1 }: IServicesCradle,
   { debug }: AutomationOptions
 ): Observable<unknown> {
   // Monitor how much power we are using directly from HomeWizard P1 meter
@@ -51,6 +68,39 @@ export default function (
     distinctUntilChanged(),
     tap((v) => debug("Tesla eligibility changed:", v)),
     share()
+  );
+
+  // Notify on eligibility changes with kWh remaining info
+  // Using combineLatest to ensure we get an initial emission when all values are available
+  const eligibilityNotifications$ = combineLatest([
+    teslaIsEligibleToCharge$,
+    teslamateMqtt.batteryLevel$,
+    teslamateMqtt.chargeLimitSoc$,
+  ]).pipe(
+    distinctUntilChanged(
+      (
+        [prevEligible, prevBattery, prevLimit],
+        [currEligible, currBattery, currLimit]
+      ) =>
+        prevEligible === currEligible &&
+        prevBattery === currBattery &&
+        prevLimit === currLimit
+    ),
+    switchMap(([isEligible, batteryLevel, chargeLimit]) => {
+      const remainingPercent = chargeLimit - batteryLevel;
+      const remainingKwh =
+        (remainingPercent / 100) * CHARGING_CONFIG.batteryCapacityKwh;
+
+      if (isEligible) {
+        return notify.single$(
+          `🔌 Tesla eligible for solar charging - ${remainingKwh.toFixed(1)} kWh needed (${batteryLevel}% → ${chargeLimit}%)`
+        );
+      } else {
+        return notify.single$(
+          `⏸️ Tesla not eligible for charging (${batteryLevel}% / ${chargeLimit}%)`
+        );
+      }
+    })
   );
 
   const teslaChargingState$ = teslamateMqtt.chargingState$.pipe(
@@ -85,7 +135,11 @@ export default function (
   const teslaBleChargeState$ = expectedChargeState$.pipe(
     map((state) => state.isCharging),
     distinctUntilChanged(),
-    tap((isCharging) => debug(`Expected charging state changed to: ${isCharging} - ${isCharging ? "starting" : "stopping"} BLE polling`)),
+    tap((isCharging) =>
+      debug(
+        `Expected charging state changed to: ${isCharging} - ${isCharging ? "starting" : "stopping"} BLE polling`
+      )
+    ),
     switchMap((isCharging) => {
       // Only poll BLE when actively charging (based on optimistic state)
       if (!isCharging) {
@@ -133,54 +187,73 @@ export default function (
   // Priority: BLE (when charging) > MQTT (fallback)
 
   // BLE updates (most accurate when charging) - every 30 seconds
-  teslaBleChargeState$.pipe(
-    tap((bleState) => {
-      const isCharging = bleState.charging_state === "Charging";
-      const actualAmps = bleState.charger_actual_current;
-      const actualPowerKw = bleState.charger_power;
+  teslaBleChargeState$
+    .pipe(
+      tap((bleState) => {
+        const isCharging = bleState.charging_state === "Charging";
+        const actualAmps = bleState.charger_actual_current;
+        const actualPowerKw = bleState.charger_power;
 
-      debug(`↻ Syncing expected state with BLE: ${actualAmps}A (${actualPowerKw}kW) [${bleState.charging_state}]`);
-      expectedChargeState$.next({
-        isCharging,
-        expectedAmps: actualAmps,
-        expectedPowerKw: actualPowerKw,
-      });
-    })
-  ).subscribe();
-
-  // MQTT updates (fallback when BLE not available or not charging)
-  teslaChargerPower$.pipe(
-    withLatestFrom(teslaChargingState$),
-    tap(([actualPowerKw, chargingState]) => {
-      const isCharging = chargingState === "Charging";
-      const actualAmps = isCharging
-        ? Math.round((actualPowerKw * 1000) / CHARGING_CONFIG.wattsPerAmp)
-        : 0;
-
-      const current = expectedChargeState$.value;
-      // Only update from MQTT if there's a significant difference
-      // (BLE will override this when it polls)
-      if (Math.abs(current.expectedPowerKw - actualPowerKw) > 0.1 ||
-          current.isCharging !== isCharging) {
-        debug(`↻ Syncing expected state with MQTT: ${actualAmps}A (${actualPowerKw}kW)`);
+        debug(
+          `↻ Syncing expected state with BLE: ${actualAmps}A (${actualPowerKw}kW) [${bleState.charging_state}]`
+        );
         expectedChargeState$.next({
           isCharging,
           expectedAmps: actualAmps,
           expectedPowerKw: actualPowerKw,
         });
-      }
-    })
-  ).subscribe();
+      })
+    )
+    .subscribe();
+
+  // MQTT updates (fallback when BLE not available or not charging)
+  teslaChargerPower$
+    .pipe(
+      withLatestFrom(teslaChargingState$),
+      tap(([actualPowerKw, chargingState]) => {
+        const isCharging = chargingState === "Charging";
+        const actualAmps = isCharging
+          ? Math.round((actualPowerKw * 1000) / CHARGING_CONFIG.wattsPerAmp)
+          : 0;
+
+        const current = expectedChargeState$.value;
+        // Only update from MQTT if there's a significant difference
+        // (BLE will override this when it polls)
+        if (
+          Math.abs(current.expectedPowerKw - actualPowerKw) > 0.1 ||
+          current.isCharging !== isCharging
+        ) {
+          debug(
+            `↻ Syncing expected state with MQTT: ${actualAmps}A (${actualPowerKw}kW)`
+          );
+          expectedChargeState$.next({
+            isCharging,
+            expectedAmps: actualAmps,
+            expectedPowerKw: actualPowerKw,
+          });
+        }
+      })
+    )
+    .subscribe();
 
   // Calculate house base load using EXPECTED charging power for immediate response
   // This prevents lag between command execution and MQTT updates
-  const houseBaseLoad$ = powerUsage$.pipe(
-    withLatestFrom(expectedChargeState$),
+  // Recalculates whenever EITHER power usage OR expected charging state changes
+  const houseBaseLoad$ = combineLatest([
+    powerUsage$,
+    expectedChargeState$,
+  ]).pipe(
     map(([totalPower, expectedState]) => {
-      const carWatts = expectedState.isCharging ? expectedState.expectedPowerKw * 1000 : 0;
+      const carWatts = expectedState.isCharging
+        ? expectedState.expectedPowerKw * 1000
+        : 0;
       const baseLoad = totalPower - carWatts;
-      debug("House base load:", baseLoad, "W",
-            `(total: ${totalPower}W, car expected: ${carWatts}W)`);
+      debug(
+        "House base load:",
+        baseLoad,
+        "W",
+        `(total: ${totalPower}W, car expected: ${carWatts}W)`
+      );
       return baseLoad;
     }),
     share()
@@ -327,7 +400,8 @@ export default function (
     switchMap((command) => {
       switch (command.action) {
         case "START": {
-          const expectedPowerKw = (command.amps * CHARGING_CONFIG.wattsPerAmp) / 1000;
+          const expectedPowerKw =
+            (command.amps * CHARGING_CONFIG.wattsPerAmp) / 1000;
 
           // Optimistically update expected state BEFORE command executes
           expectedChargeState$.next({
@@ -335,9 +409,11 @@ export default function (
             expectedAmps: command.amps,
             expectedPowerKw,
           });
-          debug(`→ Expected state updated: ${command.amps}A (${expectedPowerKw.toFixed(2)}kW)`);
+          debug(
+            `→ Expected state updated: ${command.amps}A (${expectedPowerKw.toFixed(2)}kW)`
+          );
 
-          return teslaBle.setChargingAmps$(command.amps).pipe(
+          const commandResult$ = teslaBle.setChargingAmps$(command.amps).pipe(
             switchMap(() => teslaBle.startCharging$()),
             tap(() => debug(`✓ Started charging at ${command.amps}A`)),
             catchError((err) => {
@@ -351,9 +427,34 @@ export default function (
               return EMPTY;
             })
           );
+
+          const successNotification$ = commandResult$.pipe(
+            switchMap(() =>
+              notify.single$(
+                `🔋 Started solar charging at ${command.amps}A (${expectedPowerKw.toFixed(1)}kW)`
+              )
+            )
+          );
+
+          const errorNotification$ = teslaBle
+            .setChargingAmps$(command.amps)
+            .pipe(
+              switchMap(() => teslaBle.startCharging$()),
+              switchMap(() => EMPTY),
+              catchError((err) =>
+                notify.single$(`⚠️ Failed to start charging: ${err.message}`)
+              )
+            );
+
+          return merge(
+            commandResult$,
+            successNotification$,
+            errorNotification$
+          );
         }
         case "ADJUST": {
-          const expectedPowerKw = (command.amps * CHARGING_CONFIG.wattsPerAmp) / 1000;
+          const expectedPowerKw =
+            (command.amps * CHARGING_CONFIG.wattsPerAmp) / 1000;
 
           // Optimistically update expected state
           expectedChargeState$.next({
@@ -361,17 +462,42 @@ export default function (
             expectedAmps: command.amps,
             expectedPowerKw,
           });
-          debug(`→ Expected state updated: ${command.amps}A (${expectedPowerKw.toFixed(2)}kW)`);
+          debug(
+            `→ Expected state updated: ${command.amps}A (${expectedPowerKw.toFixed(2)}kW)`
+          );
 
-          return teslaBle.setChargingAmps$(command.amps).pipe(
+          const commandResult$ = teslaBle.setChargingAmps$(command.amps).pipe(
             tap(() => debug(`✓ Adjusted charging to ${command.amps}A`)),
             catchError((err) => {
               debug(`✗ Failed to adjust charging:`, err.message);
               return EMPTY;
             })
           );
+
+          const successNotification$ = commandResult$.pipe(
+            switchMap(() =>
+              notify.single$(
+                `⚡ Adjusted charging to ${command.amps}A (${expectedPowerKw.toFixed(1)}kW)`
+              )
+            )
+          );
+
+          const errorNotification$ = teslaBle
+            .setChargingAmps$(command.amps)
+            .pipe(
+              switchMap(() => EMPTY),
+              catchError((err) =>
+                notify.single$(`⚠️ Failed to adjust charging: ${err.message}`)
+              )
+            );
+
+          return merge(
+            commandResult$,
+            successNotification$,
+            errorNotification$
+          );
         }
-        case "STOP":
+        case "STOP": {
           // Optimistically update expected state
           expectedChargeState$.next({
             isCharging: false,
@@ -380,17 +506,43 @@ export default function (
           });
           debug(`→ Expected state updated: STOPPED (0kW)`);
 
-          return teslaBle.stopCharging$().pipe(
+          const reasonText =
+            command.reason === "insufficient-solar"
+              ? "insufficient solar power"
+              : "charging complete or not eligible";
+
+          const commandResult$ = teslaBle.stopCharging$().pipe(
             tap(() => debug(`✓ Stopped charging (${command.reason})`)),
             catchError((err) => {
               debug(`✗ Failed to stop charging:`, err.message);
               return EMPTY;
             })
           );
+
+          const successNotification$ = commandResult$.pipe(
+            switchMap(() =>
+              notify.single$(`🛑 Stopped charging due to ${reasonText}`)
+            )
+          );
+
+          const errorNotification$ = teslaBle.stopCharging$().pipe(
+            switchMap(() => EMPTY),
+            catchError((err) =>
+              notify.single$(`⚠️ Failed to stop charging: ${err.message}`)
+            )
+          );
+
+          return merge(
+            commandResult$,
+            successNotification$,
+            errorNotification$
+          );
+        }
       }
     }),
     share()
   );
 
-  return chargingCommands$;
+  // Merge all streams together
+  return merge(chargingCommands$, eligibilityNotifications$);
 }

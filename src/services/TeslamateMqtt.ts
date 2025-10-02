@@ -125,6 +125,7 @@ export default class TeslamateMqtt {
     return this.subscribeField$("ideal_battery_range_km", (v) => Number(v));
   }
 
+
   /**
    * Whether the car is currently at home (convenience observable)
    */

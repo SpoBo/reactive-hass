@@ -20,6 +20,12 @@ export const CHARGING_CONFIG = {
   wattsPerAmp: 230,
 
   /**
+   * Total usable battery capacity in kWh
+   * Model 3 Standard Range Plus: 78.7 kWh usable
+   */
+  batteryCapacityKwh: 78.7,
+
+  /**
    * Rolling average window for starting charging
    * Conservative 3-minute average to avoid starting on temporary spikes
    */
