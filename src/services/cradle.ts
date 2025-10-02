@@ -15,12 +15,15 @@ import Rest from "./Rest";
 import History from "./History";
 import TeslaBle from "./TeslaBle";
 import TeslamateMqtt from "./TeslamateMqtt";
+import HomeWizardP1 from "./HomeWizardP1";
 
 const TESLA_CONFIG = {
   baseUrl: "http://10.0.0.15:8080",
   vin: "LRW3E7EK9NC512649",
   teslamateCarId: 1,
 } as const;
+
+const HOMEWIZARD_P1_IP = "10.0.0.246";
 
 export interface IServicesCradle {
   config: Config;
@@ -38,6 +41,7 @@ export interface IServicesCradle {
   binarySensor: BinarySensor;
   teslaBle: TeslaBle;
   teslamateMqtt: TeslamateMqtt;
+  homeWizardP1: HomeWizardP1;
 }
 
 // sets up awilix ... .
@@ -66,6 +70,10 @@ container.register({
   ),
   teslamateMqtt: asFunction(
     (cradle) => new TeslamateMqtt(cradle, TESLA_CONFIG.teslamateCarId),
+    { lifetime: "SINGLETON" }
+  ),
+  homeWizardP1: asFunction(
+    () => new HomeWizardP1(HOMEWIZARD_P1_IP),
     { lifetime: "SINGLETON" }
   ),
 });

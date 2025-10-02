@@ -1,17 +1,13 @@
-import { combineLatest, EMPTY, Observable, of, timer, interval } from "rxjs";
+import { combineLatest, EMPTY, Observable, timer, interval } from "rxjs";
 import {
-  pluck,
   map,
   distinctUntilChanged,
   switchMap,
-  withLatestFrom,
   share,
-  mergeWith,
   tap,
   startWith,
   catchError,
   retry,
-  delayWhen,
 } from "rxjs/operators";
 import { AutomationOptions } from "./index";
 import { IServicesCradle } from "../services/cradle";
@@ -28,14 +24,12 @@ const ROLLING_AVERAGE_FOR_STARTING = "3m";
  * The idea is that we will have a priority mechanism based on some configuration.
  */
 export default function (
-  { states, notify, teslaBle, teslamateMqtt }: IServicesCradle,
+  { states, notify, teslaBle, teslamateMqtt, homeWizardP1 }: IServicesCradle,
   { debug }: AutomationOptions
 ): Observable<unknown> {
-  // Monitor how much power we are using.
-  const powerUsage$ = states.entity$("sensor.p1_meter_power").pipe(
-    pluck("state"),
-    map((v) => Number(v)),
-    tap((v) => debug("powerUsage:", v)),
+  // Monitor how much power we are using directly from HomeWizard P1 meter
+  const powerUsage$ = homeWizardP1.activePower$.pipe(
+    tap((v) => debug("powerUsage:", v, "W")),
     distinctUntilChanged(),
     share()
   );
