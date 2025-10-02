@@ -3,7 +3,7 @@ import DEBUG from "debug";
 import { connect, IClientPublishOptions, IPublishPacket } from "mqtt";
 import ms from "ms";
 
-import { concat, Observable, fromEvent, Subject, EMPTY, merge, of } from "rxjs";
+import { Observable, fromEvent, Subject, EMPTY, merge, of } from "rxjs";
 import {
   filter,
   map,
@@ -161,8 +161,8 @@ export default class Mqtt {
   public subscribe$(topic: string, options?: MqttSubscribeOptions) {
     const stream$ = this.client$.pipe(
       switchMap((d) => {
-        const subscribe$ = d.subscribe$({ topic });
-
+        // Start listening for messages BEFORE subscribing
+        // This ensures we catch retained messages that arrive immediately
         const replies$ = d.message$.pipe(
           filter(([incomingTopic]) => incomingTopic === topic),
           map((args) => args[1].toString()),
@@ -173,7 +173,13 @@ export default class Mqtt {
           })
         );
 
-        return concat(subscribe$, replies$);
+        const subscribe$ = d.subscribe$({ topic });
+
+        // Merge both streams - replies$ is already listening when subscribe$ triggers
+        return merge(subscribe$, replies$).pipe(
+          // Filter out the subscription confirmation (empty value)
+          filter((value) => typeof value === "string")
+        );
       })
     );
 

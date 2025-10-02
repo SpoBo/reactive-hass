@@ -1,4 +1,4 @@
-import { createContainer, InjectionMode, asClass } from "awilix";
+import { createContainer, InjectionMode, asClass, asFunction } from "awilix";
 
 import Config from "./Config";
 import Socket from "./Socket";
@@ -13,6 +13,14 @@ import BinarySensor from "./BinarySensor";
 import Discovery from "./Discovery";
 import Rest from "./Rest";
 import History from "./History";
+import TeslaBle from "./TeslaBle";
+import TeslamateMqtt from "./TeslamateMqtt";
+
+const TESLA_CONFIG = {
+  baseUrl: "http://10.0.0.15:8080",
+  vin: "LRW3E7EK9NC512649",
+  teslamateCarId: 1,
+} as const;
 
 export interface IServicesCradle {
   config: Config;
@@ -28,6 +36,8 @@ export interface IServicesCradle {
   notify: Notify;
   hassStatus: HassStatus;
   binarySensor: BinarySensor;
+  teslaBle: TeslaBle;
+  teslamateMqtt: TeslamateMqtt;
 }
 
 // sets up awilix ... .
@@ -50,6 +60,14 @@ container.register({
   notify: asClass(Notify, { lifetime: "SINGLETON" }),
   hassStatus: asClass(HassStatus, { lifetime: "SINGLETON" }),
   binarySensor: asClass(BinarySensor, { lifetime: "SINGLETON" }),
+  teslaBle: asFunction(
+    () => new TeslaBle(TESLA_CONFIG.baseUrl, TESLA_CONFIG.vin),
+    { lifetime: "SINGLETON" }
+  ),
+  teslamateMqtt: asFunction(
+    (cradle) => new TeslamateMqtt(cradle, TESLA_CONFIG.teslamateCarId),
+    { lifetime: "SINGLETON" }
+  ),
 });
 
 export default container.cradle as IServicesCradle;
