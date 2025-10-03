@@ -13,8 +13,11 @@ const services = requireDir("./");
 const debug = DEBUG("reactive-hass.automations");
 
 export type AutomationOptions = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  debug: (message?: any, ...args: any[]) => void;
+  debug: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (message?: any, ...args: any[]): void;
+    extend: (namespace: string) => AutomationOptions["debug"];
+  };
 };
 
 type Automation = (
