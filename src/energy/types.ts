@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { IServicesCradle } from "../../services/cradle";
+import { IServicesCradle } from "../services/cradle";
 
 /**
  * Type of load control mechanism
@@ -59,14 +59,10 @@ export interface PriorityResult {
 }
 
 /**
- * Command to execute on a load
+ * Power allocation for a load (in watts)
+ * 0 means the load should be off/stopped
  */
-export interface LoadCommand {
-  loadId: string;
-  action: "START" | "ADJUST" | "STOP";
-  targetPower: number; // Watts
-  reason?: string;
-}
+export type PowerAllocation = number;
 
 /**
  * Debug function signature (from debug package)
@@ -96,8 +92,12 @@ export interface ManagedLoad {
   eligibility$: Observable<EligibilityResult>;
   priority$: Observable<PriorityResult>;
 
-  // Command execution
-  executeCommand$(command: LoadCommand): Observable<void>;
+  // Allocated power target (set by load manager)
+  // Load should reconcile itself to match this power level
+  allocatedPower$: Observable<PowerAllocation>;
+
+  // Method to set the allocated power target
+  setAllocatedPower(power: PowerAllocation): void;
 }
 
 /**

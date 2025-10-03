@@ -8,7 +8,7 @@ import { url } from "convict-format-with-validator";
 import { shareReplay } from "rxjs/operators";
 import DEBUG from "debug";
 
-const debug = DEBUG("reactive-hass.config");
+const debug = DEBUG("r-h.config");
 
 convict.addParser({ extension: ["yml", "yaml"], parse: yaml.load });
 convict.addFormat(url);

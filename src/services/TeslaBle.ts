@@ -5,7 +5,7 @@ import { from, Observable, switchMap, timeout, catchError, tap } from "rxjs";
 import { exec } from "child_process";
 import { promisify } from "util";
 
-const debug = DEBUG("reactive-hass.tesla-ble");
+const debug = DEBUG("r-h.tesla-ble");
 const execAsync = promisify(exec);
 
 const REQUEST_TIMEOUT_MS = 15000; // 15 seconds timeout for RxJS operators

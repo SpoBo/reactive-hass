@@ -36,7 +36,7 @@ type MqttSubscribeOptions = {
   assumed?: string | object | Buffer;
 };
 
-const debug = DEBUG("reactive-hass.mqtt");
+const debug = DEBUG("r-h.mqtt");
 
 function mqttClient(url: string): Observable<ISimplifiedMqttClient> {
   return new Observable((subscriber) => {

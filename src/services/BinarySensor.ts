@@ -12,7 +12,7 @@ import { ValueControl } from "../helpers/ValueControl";
 import { IServicesCradle } from "./cradle";
 import Discovery from "./Discovery";
 import Mqtt from "./Mqtt";
-const debug = DEBUG("reactive-hass.binary-sensor");
+const debug = DEBUG("r-h.binary-sensor");
 
 type BinarySensorOptions = {
   name?: string;

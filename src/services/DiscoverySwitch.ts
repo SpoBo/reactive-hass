@@ -14,7 +14,7 @@ import { IServicesCradle } from "./cradle";
 import Discovery from "./Discovery";
 import Mqtt from "./Mqtt";
 
-const debug = DEBUG("reactive-hass.discovery-switch");
+const debug = DEBUG("r-h.discovery-switch");
 
 type SwitchOptions = {
   name?: string;

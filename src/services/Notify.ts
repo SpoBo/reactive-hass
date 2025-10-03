@@ -4,7 +4,7 @@ import DEBUG from "debug";
 import { IServicesCradle } from "./cradle";
 import Service from "./Service";
 
-const debug = DEBUG("reactive-hass.notify");
+const debug = DEBUG("r-h.notify");
 
 // TODO: Would be cool if we can also have responses to the notification.
 export default class Notify {

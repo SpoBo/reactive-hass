@@ -5,7 +5,7 @@ import { HassServiceTarget } from "../types";
 import { IServicesCradle } from "./cradle";
 import Socket, { SocketErrorType } from "./Socket";
 
-const debug = DEBUG("reactive-hass.service");
+const debug = DEBUG("r-h.service");
 
 type CallServiceParameters = {
   domain: string;

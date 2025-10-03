@@ -11,7 +11,7 @@ import {
 } from "rxjs";
 import { P1MeterApi } from "homewizard-energy-api";
 
-const debug = DEBUG("reactive-hass.homewizard-p1");
+const debug = DEBUG("r-h.homewizard-p1");
 
 const POLL_INTERVAL_MS = 1000; // Poll every 1 second
 

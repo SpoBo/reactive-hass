@@ -10,7 +10,7 @@ import { ValueControl } from "../helpers/ValueControl";
 
 const services = requireDir("./");
 
-const debug = DEBUG("reactive-hass.automations");
+const debug = DEBUG("r-h.automations");
 
 export type AutomationOptions = {
   debug: {
@@ -45,7 +45,7 @@ if (RUN) {
   }
 
   observable$ = services[RUN].default(servicesCradle, {
-    debug: DEBUG("reactive-hass.run-automation." + RUN),
+    debug: DEBUG("r-h.run-automation." + RUN),
   });
 } else {
   const mapped = Object.entries(
@@ -66,7 +66,7 @@ if (RUN) {
         if (state.current) {
           console.log("starting automation", name);
           return automation.default(servicesCradle, {
-            debug: DEBUG("reactive-hass.automation." + name),
+            debug: DEBUG("r-h.automation." + name),
           });
         }
 

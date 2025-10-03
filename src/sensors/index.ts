@@ -10,7 +10,7 @@ import { SensorConfig } from "../types";
 
 const services = requireDir("./");
 
-const debug = DEBUG("reactive-hass.sensors");
+const debug = DEBUG("r-h.sensors");
 
 export type SensorOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,7 +38,7 @@ const mapped = Object.entries(
       switch (sensor.config?.type ?? "binary") {
         case "binary":
           return fn(servicesCradle, {
-            debug: DEBUG("reactive-hass.sensor." + name),
+            debug: DEBUG("r-h.sensor." + name),
           }) as Observable<boolean>;
         default:
           throw new Error(`sensor '${name} is not of a supported type.'`);

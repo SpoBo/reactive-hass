@@ -3,7 +3,7 @@ import { map, Observable } from "rxjs";
 import { HassEntityBase } from "../types";
 import Rest from "./Rest";
 
-const debug = DEBUG("reactive-hass.history");
+const debug = DEBUG("r-h.history");
 
 type HistoryHassEntityType = HassEntityBase;
 

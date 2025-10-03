@@ -17,7 +17,7 @@ import {
   tap,
 } from "rxjs/operators";
 
-const debug = DEBUG("reactive-hass.helpers.value-control");
+const debug = DEBUG("r-h.helpers.value-control");
 
 type ValueControlPayload<T> = {
   id: string;

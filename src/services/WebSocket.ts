@@ -4,7 +4,7 @@ import DEBUG from "debug";
 
 import { fromEvent, Observable, of } from "rxjs";
 
-const debug = DEBUG("reactive-hass.web-socket");
+const debug = DEBUG("r-h.web-socket");
 
 export type WebSocketMessageType = ArrayBufferLike | ArrayBufferView | string;
 

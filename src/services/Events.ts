@@ -5,7 +5,7 @@ import { StateChangedEvent } from "../types";
 import Socket from "./Socket";
 import { map } from "rxjs/operators";
 
-const debug = DEBUG("reactive-hass.events");
+const debug = DEBUG("r-h.events");
 
 type StateChangedEventData = StateChangedEvent["data"];
 

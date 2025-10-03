@@ -5,7 +5,7 @@ import { map, switchMapTo, tap } from "rxjs/operators";
 import HassStatus from "./HassStatus";
 import DEBUG from "debug";
 
-const debug = DEBUG("reactive-hass.discovery");
+const debug = DEBUG("r-h.discovery");
 
 type DiscoveryDevice = {
   model: string;

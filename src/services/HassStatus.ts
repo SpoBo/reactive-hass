@@ -4,7 +4,7 @@ import { filter, map, shareReplay, startWith, tap } from "rxjs/operators";
 import { IServicesCradle } from "./cradle";
 import Mqtt from "./Mqtt";
 
-const debug = DEBUG("reactive-hass.hass-status");
+const debug = DEBUG("r-h.hass-status");
 
 export default class HassStatus {
   private mqtt: Mqtt;

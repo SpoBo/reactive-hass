@@ -4,7 +4,7 @@ import { differenceInMilliseconds } from "date-fns";
 import { from, Observable, switchMap } from "rxjs";
 import Config from "./Config";
 
-const debug = DEBUG("reactive-hass.events");
+const debug = DEBUG("r-h.events");
 
 type RestOptions = {
   method: "GET" | "POST";

@@ -8,15 +8,16 @@ import { catchError, switchMap, tap } from "rxjs/operators";
 
 import sensors$ from "./sensors/index";
 import automations$ from "./automations/index";
+import energy$ from "./energy/index";
 
-const debug = DEBUG("reactive-hass.index");
+const debug = DEBUG("r-h.index");
 
 // NOTE: This is not ideal. But using RxJS causes a lot of listeners to build up at once.
 //       I should hunt down where exactly the issue is. Perhaps it could be avoided by sharing.
 
 require("events").EventEmitter.defaultMaxListeners = Infinity;
 
-const process$ = merge(sensors$, automations$).pipe(
+const process$ = merge(sensors$, automations$, energy$).pipe(
   tap((output) => {
     debug(output);
   })

@@ -4,7 +4,7 @@ import { map, distinctUntilChanged, shareReplay, tap } from "rxjs/operators";
 import Mqtt from "./Mqtt";
 import { IServicesCradle } from "./cradle";
 
-const debug = DEBUG("reactive-hass.teslamate-mqtt");
+const debug = DEBUG("r-h.teslamate-mqtt");
 
 /**
  * Service for subscribing to Teslamate MQTT topics.

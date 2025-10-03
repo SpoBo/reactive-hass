@@ -19,7 +19,7 @@ import { URL } from "url";
 import { Lifetime, RESOLVER } from "awilix";
 import { MessageBase } from "../types";
 
-const debug = DEBUG("reactive-hass.socket");
+const debug = DEBUG("r-h.socket");
 
 type SocketManager = {
   messages$: Observable<any>;
