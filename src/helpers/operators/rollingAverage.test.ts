@@ -1,5 +1,7 @@
 import { TestScheduler } from "rxjs/testing";
 import { rollingAverage } from "./rollingAverage";
+import { median, weightedMean } from "../math/aggregations";
+import { exponentialWeights } from "../math/weights";
 
 describe("rollingAverage", () => {
   let testScheduler: TestScheduler;
@@ -88,6 +90,84 @@ describe("rollingAverage", () => {
         a: 10,
         b: 15,
         c: 25,
+      });
+    });
+  });
+
+  describe("with custom aggregation functions", () => {
+    it("should use median to ignore outliers", () => {
+      testScheduler.run(({ cold, expectObservable }) => {
+        // Send mostly 50W with two 2000W spikes
+        const source$ = cold("a 99ms b 99ms c 99ms d 99ms e|", {
+          a: 50,
+          b: 50,
+          c: 2000, // spike
+          d: 50,
+          e: 2000, // spike
+        });
+        const result$ = source$.pipe(rollingAverage(1000, median));
+
+        // Median ignores spikes:
+        // a: median([50]) = 50
+        // b: median([50, 50]) = 50
+        // c: median([50, 50, 2000]) = 50 (not affected by spike!)
+        // d: median([50, 50, 2000, 50]) = 50
+        // e: median([50, 50, 2000, 50, 2000]) = 50
+        expectObservable(result$).toBe("a 99ms b 99ms c 99ms d 99ms e|", {
+          a: 50,
+          b: 50,
+          c: 50,
+          d: 50,
+          e: 50,
+        });
+      });
+    });
+
+    it("should use weighted mean to prioritize recent values", () => {
+      testScheduler.run(({ cold, expectObservable }) => {
+        // Three values: old=100, middle=100, recent=300
+        const source$ = cold("a 99ms b 99ms c|", { a: 100, b: 100, c: 300 });
+
+        // Exponential weights with strong recency bias
+        // For 3 values with decay 0.5: [0.143, 0.286, 0.571]
+        const result$ = source$.pipe(
+          rollingAverage(1000, weightedMean(exponentialWeights(3, 0.5)))
+        );
+
+        // a: weighted([100]) = 100
+        // b: weighted([100, 100]) with weights [0.333, 0.667] ≈ 100
+        // c: weighted([100, 100, 300]) with weights [0.143, 0.286, 0.571]
+        //    = 100*0.143 + 100*0.286 + 300*0.571 ≈ 214.29
+        expectObservable(result$).toBe("a 99ms b 99ms c|", {
+          a: 100,
+          b: 100,
+          c: 214.28571428571428, // Significantly influenced by recent spike (vs mean = 166)
+        });
+      });
+    });
+
+    it("should use weighted mean that adapts to window size", () => {
+      testScheduler.run(({ cold, expectObservable }) => {
+        const source$ = cold("a 99ms b 99ms c 99ms d|", {
+          a: 100,
+          b: 100,
+          c: 100,
+          d: 500,
+        });
+
+        // 20 weights but only 4 values - should use last 4 weights
+        const result$ = source$.pipe(
+          rollingAverage(1000, weightedMean(exponentialWeights(20, 0.5)))
+        );
+
+        // d: Last 4 weights from exponentialWeights(20, 0.5) heavily favor position 19
+        // Should give very high weight to the 500 value
+        expectObservable(result$).toBe("a 99ms b 99ms c 99ms d|", {
+          a: 100,
+          b: 100,
+          c: 100,
+          d: 313.3333333333333, // Heavily weighted toward 500 (vs mean = 225)
+        });
       });
     });
   });

@@ -72,10 +72,9 @@ container.register({
     (cradle) => new TeslamateMqtt(cradle, TESLA_CONFIG.teslamateCarId),
     { lifetime: "SINGLETON" }
   ),
-  homeWizardP1: asFunction(
-    () => new HomeWizardP1(HOMEWIZARD_P1_IP),
-    { lifetime: "SINGLETON" }
-  ),
+  homeWizardP1: asFunction(() => new HomeWizardP1(HOMEWIZARD_P1_IP), {
+    lifetime: "SINGLETON",
+  }),
 });
 
 export default container.cradle as IServicesCradle;

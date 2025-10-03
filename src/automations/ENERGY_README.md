@@ -22,6 +22,7 @@ The system uses an **event-driven architecture** rather than a `combineLatest` a
 The automation uses three separate observable streams for charging decisions:
 
 #### 1. **Start Charging** (`startChargingDecisions$`)
+
 - **Trigger**: `teslaIsEligibleToCharge$` emits `true`
 - **Condition**: Must not already be charging
 - **Evaluation**: Uses 3-minute rolling average of solar overhead
@@ -29,6 +30,7 @@ The automation uses three separate observable streams for charging decisions:
 - **Action**: Set charging amps and start charging
 
 #### 2. **Adjust Charging** (`adjustChargingDecisions$`)
+
 - **Trigger**: `teslaChargingState$` emits "Charging"
 - **Evaluation**: Uses 30-second rolling average (fast response)
 - **Logic**: Continuously monitors and adjusts amperage to match available solar
@@ -36,6 +38,7 @@ The automation uses three separate observable streams for charging decisions:
 - **Debouncing**: `distinctUntilChanged` prevents unnecessary adjustments
 
 #### 3. **Stop Charging** (`stopChargingDecisions$`)
+
 - **Triggers**: Two independent conditions merged:
   - Insufficient solar (using 3-minute average < minimum)
   - Lost eligibility (unplugged, reached charge limit, left home, etc.)
@@ -46,11 +49,11 @@ The automation uses three separate observable streams for charging decisions:
 
 Each decision uses a different time window for rolling averages:
 
-| Decision | Window | Reasoning |
-|----------|--------|-----------|
-| **Start** | 3 minutes | Conservative - avoid starting on brief solar spikes |
-| **Adjust** | 30 seconds | Responsive - quickly adapt to changing conditions |
-| **Stop** | 3 minutes | Conservative - avoid stopping on temporary cloud cover |
+| Decision   | Window     | Reasoning                                              |
+| ---------- | ---------- | ------------------------------------------------------ |
+| **Start**  | 3 minutes  | Conservative - avoid starting on brief solar spikes    |
+| **Adjust** | 30 seconds | Responsive - quickly adapt to changing conditions      |
+| **Stop**   | 3 minutes  | Conservative - avoid stopping on temporary cloud cover |
 
 This approach prevents thrashing (starting/stopping repeatedly) while still being responsive to real conditions.
 
@@ -133,6 +136,7 @@ The system uses three data sources with different priorities:
 3. **MQTT** (fallback) - Updates state when not charging or BLE unavailable
 
 This layered approach ensures:
+
 - Immediate response to commands (optimistic)
 - Accurate tracking during charging (BLE)
 - Car can sleep when not needed (conditional polling)
@@ -155,12 +159,14 @@ const houseBaseLoad$ = powerUsage$.pipe(
 ```
 
 **Why use expected state?**
+
 - P1 meter shows total power consumption
 - If car is charging at 2kW and house uses 1kW, meter shows 3kW total
 - We need to subtract the car's consumption to know the house base load
 - Using optimistic state prevents lag-induced miscalculations
 
 Solar overhead is then: `solarOverhead = -houseBaseLoad`
+
 - Negative house load means we're producing more than consuming
 - Positive overhead = excess solar available for charging
 
@@ -183,21 +189,27 @@ This ensures notifications are part of the reactive stream and execute automatic
 ## Key Learnings
 
 ### 1. Event-Driven > Reactive Combos for Complex Logic
+
 For complex automations with distinct decision points, event-driven streams (using `switchMap` and `filter`) are more maintainable than massive `combineLatest` blocks.
 
 ### 2. Optimistic Updates Eliminate Lag
+
 When controlling physical devices with delayed feedback, optimistic state management is essential. Update your model immediately, then sync with reality asynchronously.
 
 ### 3. Different Time Windows for Different Decisions
+
 Not all decisions should react at the same speed. Start/stop need stability (3m), adjustments need responsiveness (30s).
 
 ### 4. Conditional Polling Respects Device Sleep
+
 Only poll APIs when you need fresh data. Use optimistic state or MQTT for passive monitoring, BLE only when actively managing the device.
 
 ### 5. Layer Your Data Sources
+
 Having multiple data sources with different priorities (optimistic → BLE → MQTT) provides both immediate response and eventual accuracy.
 
 ### 6. Pure Functions Enable Testing
+
 All charging logic (`calculateOptimalAmps`, `shouldStopCharging`, etc.) is extracted into pure helper functions. This makes the system fully testable with 100% coverage.
 
 ## Configuration
@@ -214,6 +226,7 @@ All constants are centralized in `./charging/config.ts`:
 ## Testing
 
 All helper functions have comprehensive unit tests in `./charging/helpers.test.ts` with 27 passing test cases covering:
+
 - Optimal amperage calculation
 - Start/stop conditions
 - Adjustment logic

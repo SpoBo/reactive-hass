@@ -33,6 +33,8 @@ import {
   shouldAdjustAmps,
   calculateOptimalAmps,
 } from "./charging/helpers";
+import { median, weightedMean } from "../helpers/math/aggregations";
+import { exponentialWeights } from "../helpers/math/weights";
 
 const REALTIME_POLL_INTERVAL = "30s";
 
@@ -51,14 +53,20 @@ const REALTIME_POLL_INTERVAL = "30s";
  * - Layered data sources: optimistic → BLE → MQTT
  *
  * See ENERGY_README.md for detailed architecture and design decisions.
+ *
+ * TODO: Add an absolute minimum to charge to.
+ * TODO: Avoid charging the car when there is a high load on the grid.
+ * TODO: Read out a source for destinations and times of arrival to determine a new desired charge %.
+ *       As well as ensuring the car is charged by that time. So it'll then charge even when there is no solar. But it will still do peak shaving if possible.
+ * TODO: Add something that can forecast how much power we may be getting from solar.
  */
 export default function (
   { notify, teslaBle, teslamateMqtt, homeWizardP1 }: IServicesCradle,
   { debug }: AutomationOptions
 ): Observable<unknown> {
   // Monitor how much power we are using directly from HomeWizard P1 meter
+  // Keep raw values - rolling averages will be applied later for specific decisions
   const powerUsage$ = homeWizardP1.activePower$.pipe(
-    tap((v) => debug("powerUsage:", v, "W")),
     distinctUntilChanged(),
     share()
   );
@@ -236,54 +244,56 @@ export default function (
     )
     .subscribe();
 
+  const expectedLoad$ = expectedChargeState$.pipe(
+    map((v) => (v.isCharging ? v.expectedPowerKw * 1000 : 0)),
+    tap((v) => debug("expectedLoad:", v, "W")),
+    distinctUntilChanged()
+  );
+
   // Calculate house base load using EXPECTED charging power for immediate response
   // This prevents lag between command execution and MQTT updates
   // Recalculates whenever EITHER power usage OR expected charging state changes
+  // Uses RAW power values - rolling averages applied later for decision-making
   const houseBaseLoad$ = combineLatest([
-    powerUsage$,
-    expectedChargeState$,
+    powerUsage$, // Using raw values instead of pre-averaged
+    expectedLoad$,
   ]).pipe(
-    map(([totalPower, expectedState]) => {
-      const carWatts = expectedState.isCharging
-        ? expectedState.expectedPowerKw * 1000
-        : 0;
-      const baseLoad = totalPower - carWatts;
-      debug(
-        "House base load:",
-        baseLoad,
-        "W",
-        `(total: ${totalPower}W, car expected: ${carWatts}W)`
-      );
-      return baseLoad;
+    map(([totalPower, expectedLoad]) => {
+      return totalPower - expectedLoad;
     }),
     share()
   );
 
-  // Calculate solar overhead (negative house load = production)
-  const solarOverhead$ = houseBaseLoad$.pipe(
+  // Calculate energy available (negative house load = production)
+  const energyAvailable$ = houseBaseLoad$.pipe(
     map((baseLoad) => {
       const overhead = calculateSolarOverhead(baseLoad);
-      debug("Solar overhead:", overhead, "W");
+      debug("Energy available:", overhead, "W");
       return overhead;
     }),
     share()
   );
 
   // Multiple rolling averages for different decision points
+  // Start/Stop: Use median for robustness against spikes - better for long-term decisions
   const startAverage$ = createRollingAverage$(
-    solarOverhead$,
-    CHARGING_CONFIG.startWindow
-  ).pipe(tap((v) => debug("Start average (3m):", v, "W")));
+    energyAvailable$,
+    CHARGING_CONFIG.startWindow,
+    median // Robust to spikes - ignores outliers when deciding to start
+  ).pipe(tap((v) => debug("Start average (3m, median):", v, "W")));
 
+  // Adjust: Use weighted mean with exponential decay - prioritize recent values for quick response
   const adjustAverage$ = createRollingAverage$(
-    solarOverhead$,
-    CHARGING_CONFIG.adjustWindow
-  ).pipe(tap((v) => debug("Adjust average (30s):", v, "W")));
+    energyAvailable$,
+    CHARGING_CONFIG.adjustWindow,
+    weightedMean(exponentialWeights(20, 0.5)) // Recent values weighted higher for responsive adjustments
+  ).pipe(tap((v) => debug("Adjust average (30s, weighted):", v, "W")));
 
   const stopAverage$ = createRollingAverage$(
-    solarOverhead$,
-    CHARGING_CONFIG.stopWindow
-  ).pipe(tap((v) => debug("Stop average (3m):", v, "W")));
+    energyAvailable$,
+    CHARGING_CONFIG.stopWindow,
+    median // Robust to spikes - prevents premature stopping
+  ).pipe(tap((v) => debug("Stop average (3m, median):", v, "W")));
 
   // ========== CHARGING DECISION STREAMS ==========
 

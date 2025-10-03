@@ -1,24 +1,48 @@
 import { Observable } from "rxjs";
 import { scan, map, timestamp } from "rxjs/operators";
+import { mean } from "../math/aggregations";
 
 /**
- * RxJS operator that calculates a rolling average over a time window.
+ * Function that aggregates an array of numbers into a single value.
+ */
+export type AggregationFn = (values: number[]) => number;
+
+/**
+ * RxJS operator that calculates a rolling aggregate over a time window.
  *
  * Maintains a sliding window of values within the specified time span.
- * Each emission calculates the average of all values received in the last `windowSize` milliseconds.
+ * Each emission calculates an aggregate of all values received in the last `windowSize` milliseconds.
  *
- * @param windowSize - Time window in milliseconds for calculating the rolling average
- * @returns Operator function that transforms a number stream into rolling averages
+ * @param windowSize - Time window in milliseconds for calculating the rolling aggregate
+ * @param aggregationFn - Function to aggregate values (default: arithmetic mean)
+ *                        Common options: mean, median, trimmedMean(10), weightedMean(exponentialWeights(20, 0.5))
+ * @returns Operator function that transforms a number stream into rolling aggregates
  *
  * @example
  * ```typescript
+ * // Standard rolling average
  * source$.pipe(
  *   rollingAverage(1000),
  *   distinctUntilChanged()
  * )
+ *
+ * // Robust to outliers using median
+ * source$.pipe(
+ *   rollingAverage(1000, median),
+ *   distinctUntilChanged()
+ * )
+ *
+ * // Weighted toward recent values
+ * source$.pipe(
+ *   rollingAverage(1000, weightedMean(exponentialWeights(20, 0.5))),
+ *   distinctUntilChanged()
+ * )
  * ```
  */
-export function rollingAverage(windowSize: number) {
+export function rollingAverage(
+  windowSize: number,
+  aggregationFn: AggregationFn = mean
+) {
   return (source$: Observable<number>): Observable<number> => {
     return source$.pipe(
       // Add timestamp to each value using RxJS's timestamp operator
@@ -34,11 +58,11 @@ export function rollingAverage(windowSize: number) {
         },
         [] as Array<{ value: number; timestamp: number }>
       ),
-      // Calculate average
-      map((values) => {
-        if (values.length === 0) return 0;
-        const sum = values.reduce((total, item) => total + item.value, 0);
-        return sum / values.length;
+      // Calculate aggregate
+      map((timestampedValues) => {
+        if (timestampedValues.length === 0) return 0;
+        const values = timestampedValues.map((item) => item.value);
+        return aggregationFn(values);
       })
     );
   };

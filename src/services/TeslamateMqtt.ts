@@ -145,15 +145,14 @@ export default class TeslamateMqtt {
     return combineLatest([
       this.isAtHome$,
       this.pluggedIn$,
-      this.isConnected$,
       this.batteryLevel$,
       this.chargeLimitSoc$,
     ]).pipe(
-      map(([isAtHome, pluggedIn, isConnected, batteryLevel, chargeLimit]) => {
+      map(([isAtHome, pluggedIn, batteryLevel, chargeLimit]) => {
         const needsCharging = batteryLevel < chargeLimit;
-        const eligible = isAtHome && pluggedIn && isConnected && needsCharging;
+        const eligible = isAtHome && pluggedIn && needsCharging;
         debug(
-          `Eligible to charge: ${eligible} (home=${isAtHome}, plugged=${pluggedIn}, connected=${isConnected}, battery=${batteryLevel}%, limit=${chargeLimit}%)`
+          `Eligible to charge: ${eligible} (home=${isAtHome}, plugged=${pluggedIn}, battery=${batteryLevel}%, limit=${chargeLimit}%)`
         );
         return eligible;
       }),
@@ -168,23 +167,6 @@ export default class TeslamateMqtt {
   get isCharging$(): Observable<boolean> {
     return this.chargingState$.pipe(
       map((state) => state === "Charging"),
-      distinctUntilChanged()
-    );
-  }
-
-  /**
-   * Whether the car is connected to charger (plugged in and state is Connected/Charging/Complete)
-   */
-  get isConnected$(): Observable<boolean> {
-    return this.chargingState$.pipe(
-      map((state) => {
-        return (
-          state === "Connected" ||
-          state === "Charging" ||
-          state === "Complete" ||
-          state === "Stopped"
-        );
-      }),
       distinctUntilChanged()
     );
   }
