@@ -40,7 +40,9 @@ export default class TeslamateMqtt {
       map((value) => {
         const stringValue = value.toString();
         const transformed = transform(stringValue);
-        debug(`Received ${field}: "${stringValue}" -> ${JSON.stringify(transformed)}`);
+        debug(
+          `Received ${field}: "${stringValue}" -> ${JSON.stringify(transformed)}`
+        );
         return transformed;
       }),
       distinctUntilChanged(),
@@ -125,7 +127,6 @@ export default class TeslamateMqtt {
     return this.subscribeField$("ideal_battery_range_km", (v) => Number(v));
   }
 
-
   /**
    * Whether the car is currently at home (convenience observable)
    */
@@ -176,11 +177,14 @@ export default class TeslamateMqtt {
    */
   get isConnected$(): Observable<boolean> {
     return this.chargingState$.pipe(
-      map((state) =>
-        state === "Connected" ||
-        state === "Charging" ||
-        state === "Complete"
-      ),
+      map((state) => {
+        return (
+          state === "Connected" ||
+          state === "Charging" ||
+          state === "Complete" ||
+          state === "Stopped"
+        );
+      }),
       distinctUntilChanged()
     );
   }
@@ -190,15 +194,13 @@ export default class TeslamateMqtt {
    */
   get needsCharging$(): Observable<boolean> {
     return combineLatest([this.batteryLevel$, this.chargeLimitSoc$]).pipe(
-      map(
-        ([batteryLevel, chargeLimit]) => {
-          const needs = batteryLevel < chargeLimit;
-          debug(
-            `Needs charging: ${needs} (battery=${batteryLevel}%, limit=${chargeLimit}%)`
-          );
-          return needs;
-        }
-      ),
+      map(([batteryLevel, chargeLimit]) => {
+        const needs = batteryLevel < chargeLimit;
+        debug(
+          `Needs charging: ${needs} (battery=${batteryLevel}%, limit=${chargeLimit}%)`
+        );
+        return needs;
+      }),
       distinctUntilChanged(),
       shareReplay(1)
     );
