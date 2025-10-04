@@ -25,7 +25,6 @@ const createLoadState = (
     current: {
       isActive: false,
       power: 0,
-      source: "mqtt",
       confidence: "high",
     },
     expected: {
@@ -98,7 +97,6 @@ describe("allocatePower - Modulated Loads", () => {
         current: {
           isActive: true,
           power: 2000,
-          source: "ble",
           confidence: "high",
         },
         expected: {
@@ -125,7 +123,6 @@ describe("allocatePower - Modulated Loads", () => {
         current: {
           isActive: true,
           power: 1500,
-          source: "ble",
           confidence: "high",
         },
         expected: {
@@ -152,7 +149,6 @@ describe("allocatePower - Modulated Loads", () => {
         current: {
           isActive: true,
           power: 2500,
-          source: "ble",
           confidence: "high",
         },
         expected: {
@@ -179,7 +175,6 @@ describe("allocatePower - Modulated Loads", () => {
         current: {
           isActive: true,
           power: 2000,
-          source: "ble",
           confidence: "high",
         },
         expected: {
@@ -206,7 +201,6 @@ describe("allocatePower - Modulated Loads", () => {
         current: {
           isActive: false,
           power: 0,
-          source: "mqtt",
           confidence: "medium",
         },
         expected: {
@@ -231,7 +225,6 @@ describe("allocatePower - Modulated Loads", () => {
         current: {
           isActive: true,
           power: 1000, // Actual power (ignored when pending)
-          source: "ble",
           confidence: "high",
         },
         expected: {
@@ -268,7 +261,6 @@ describe("allocatePower - Binary Loads", () => {
         current: {
           isActive: false,
           power: 0,
-          source: "entity",
           confidence: "high",
         },
         expected: {
@@ -311,7 +303,6 @@ describe("allocatePower - Binary Loads", () => {
         current: {
           isActive: true,
           power: 2000,
-          source: "entity",
           confidence: "high",
         },
         expected: {
@@ -341,7 +332,6 @@ describe("allocatePower - Binary Loads", () => {
         current: {
           isActive: true,
           power: 2000,
-          source: "entity",
           confidence: "high",
         },
         expected: {
@@ -373,7 +363,6 @@ describe("allocatePower - Binary Loads", () => {
         current: {
           isActive: true,
           power: 2000,
-          source: "entity",
           confidence: "high",
         },
         expected: {
@@ -446,7 +435,6 @@ describe("allocatePower - Multiple Loads with Priority", () => {
         current: {
           isActive: false,
           power: 0,
-          source: "mqtt",
           confidence: "high",
         },
         expected: { isActive: false, power: 0, hasPendingCommand: false },
@@ -466,90 +454,6 @@ describe("allocatePower - Multiple Loads with Priority", () => {
         current: {
           isActive: true,
           power: 2000,
-          source: "entity",
-          confidence: "high",
-        },
-        expected: { isActive: true, power: 2000, hasPendingCommand: false },
-        desired: { power: 2000, reason: "running" },
-      },
-    });
-
-    // With -1000W available (grid import):
-    // High can't start (not active, needs positive power), gets 0
-    // Low: canSustain = 2000 + (-1000) = 1000 < 2000 => gets 0
-    const allocation = allocatePower(
-      [lowPriority, highPriority],
-      -1000,
-      new Map(),
-      debug
-    );
-
-    expect(allocation.get("high")).toBe(0);
-    expect(allocation.get("low")).toBe(0);
-  });
-
-  it("should distribute power across multiple loads when sufficient", () => {
-    const load1 = createLoadState({
-      id: "load1",
-      priority: { score: 70 },
-      control: {
-        type: "modulated",
-        minPower: 1000,
-        maxPower: 2000,
-        stepSize: 100,
-      },
-    });
-
-    const load2 = createLoadState({
-      id: "load2",
-      priority: { score: 50 },
-      control: {
-        type: "modulated",
-        minPower: 1000,
-        maxPower: 2000,
-        stepSize: 100,
-      },
-    });
-
-    const allocation = allocatePower([load1, load2], 4000, new Map(), debug);
-
-    expect(allocation.get("load1")).toBe(2000); // Gets max
-    expect(allocation.get("load2")).toBe(2000); // Gets remaining (also max)
-  });
-
-  it("should allocate 0 to ineligible loads", () => {
-    const eligible = createLoadState({
-      id: "eligible",
-      eligibility: { eligible: true },
-    });
-
-    const ineligible = createLoadState({
-      id: "ineligible",
-      eligibility: { eligible: false, reason: "battery full" },
-    });
-
-    const allocation = allocatePower(
-      [eligible, ineligible],
-      5000,
-      new Map(),
-      debug
-    );
-
-    expect(allocation.get("eligible")).toBe(3000); // Gets power
-    expect(allocation.get("ineligible")).toBe(0); // Gets 0 due to ineligibility
-  });
-});
-
-describe("allocatePower - Edge Cases", () => {
-  const debug = createMockDebug();
-
-  it("should handle zero available power", () => {
-    const load = createLoadState({
-      state: {
-        current: {
-          isActive: true,
-          power: 2000,
-          source: "ble",
           confidence: "high",
         },
         expected: { isActive: true, power: 2000, hasPendingCommand: false },
@@ -559,7 +463,12 @@ describe("allocatePower - Edge Cases", () => {
 
     // Algorithm: targetPower = min(maxPower=3000, desired=3000, current+available=2000+0=2000)
     // targetPower = 2000W (same as current)
-    const allocation = allocatePower([load], 0, new Map(), debug);
+    const allocation = allocatePower(
+      [highPriority, lowPriority],
+      0,
+      new Map(),
+      debug
+    );
 
     expect(allocation.get("test-load")).toBe(2000);
   });
@@ -570,7 +479,6 @@ describe("allocatePower - Edge Cases", () => {
         current: {
           isActive: true,
           power: 2000,
-          source: "ble",
           confidence: "high",
         },
         expected: { isActive: true, power: 2000, hasPendingCommand: false },

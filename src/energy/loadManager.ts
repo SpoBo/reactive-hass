@@ -1,22 +1,32 @@
-import { Observable, combineLatest, EMPTY } from "rxjs";
-import { map, shareReplay, switchMap } from "rxjs/operators";
-import { ManagedLoad, PowerAllocation, DebugFn } from "./types";
-import { allocatePower, LoadAllocationInput } from "./allocatePower";
-
-/**
- * Combined load metadata and state
- * @deprecated Use LoadAllocationInput from allocatePower.ts instead
- */
-export type LoadRuntimeState = LoadAllocationInput;
+import { EMPTY, Observable, combineLatest, of } from "rxjs";
+import {
+  distinctUntilChanged,
+  map,
+  shareReplay,
+  switchMap,
+  tap,
+} from "rxjs/operators";
+import {
+  ManagedLoad,
+  PowerAllocation,
+  DebugFn,
+  LoadId,
+  LoadPowerState,
+  LoadState,
+} from "./types";
+import { allocatePower } from "./allocatePower";
+import { isDeepStrictEqual } from "util";
 
 /**
  * Configuration for load manager
  */
 export interface LoadManagerConfig {
   loads: ManagedLoad[];
-  availablePower$: Observable<number>; // Watts of solar overhead
+  availablePower$: Observable<number>; // Watts of power overhead
   debug: DebugFn;
 }
+
+type LoadManagerOutput<T extends LoadId[]> = Record<keyof T, PowerAllocation>;
 
 /**
  * Creates a load manager that monitors all loads and allocates power
@@ -27,66 +37,76 @@ export interface LoadManagerConfig {
  * @param config - Load manager configuration
  * @returns Observable that sets power allocations (never completes)
  */
-export function createLoadManager$(
-  config: LoadManagerConfig
-): Observable<void> {
-  const { loads, availablePower$, debug } = config;
-
-  // Track current allocation to avoid circular dependency with allocatedPower$
-  const currentAllocation = new Map<string, PowerAllocation>(
-    loads.map((load) => [load.id, 0])
+export function createLoadManager$<T extends LoadId[]>({
+  loads,
+  availablePower$,
+  debug,
+}: LoadManagerConfig) {
+  // Gather all load states.
+  // Into a Map where the key is the load id.
+  const allLoadStates$ = combineLatest(
+    loads.map((load) => load.state$.pipe(map((state) => [load.id, state])))
+  ).pipe(
+    map((states) => Object.fromEntries(states) as Record<keyof T, LoadState>),
+    distinctUntilChanged((prev, curr) => isDeepStrictEqual(prev, curr)),
+    shareReplay(1)
   );
 
-  // Gather all load states
-  // NOTE: We do NOT subscribe to allocatedPower$ here to avoid circular dependency
-  // The manager sets allocatedPower, it doesn't read it
-  const allLoadStates$ = combineLatest(
-    loads.map((load) =>
-      combineLatest([
-        load.control$,
-        load.state$,
-        load.eligibility$,
-        load.priority$,
-      ]).pipe(
-        map(
-          ([control, state, eligibility, priority]): LoadAllocationInput => ({
-            id: load.id,
-            name: load.name,
-            control,
-            state,
-            eligibility,
-            priority,
-          })
-        )
-      )
-    )
-  ).pipe(shareReplay(1));
-
-  // Decision stream - allocate power across loads and set allocations
-  const allocations$ = combineLatest([allLoadStates$, availablePower$]).pipe(
-    switchMap(([loadStates, availablePower]) => {
-      // Calculate new allocation based on current allocation
-      const allocation = allocatePower(
-        loadStates,
-        availablePower,
-        currentAllocation,
-        debug
-      );
-
-      debug("Power allocation:", Object.fromEntries(allocation));
-
-      // Set allocated power on each load and update our tracking map
-      loads.forEach((load) => {
-        const power = allocation.get(load.id) ?? 0;
-        currentAllocation.set(load.id, power);
-        load.setAllocatedPower(power);
-      });
-
-      // Return empty - we've set the allocations as side effects
-      return EMPTY;
+  const allLoadCurrentPower$ = combineLatest(
+    loads.map((load) => load.powerState$.pipe(map((state) => [load.id, state])))
+  ).pipe(
+    map((states) => {
+      console.log("1) load current power", states);
+      return Object.fromEntries(states) as Record<keyof T, LoadPowerState>;
+    }),
+    tap((power) => {
+      debug("2) load current power", Object.values(power));
     }),
     shareReplay(1)
   );
 
-  return allocations$;
+  // Decision stream - allocate power across loads and set allocations
+  return combineLatest([
+    allLoadStates$,
+    allLoadCurrentPower$,
+    availablePower$,
+  ]).pipe(
+    switchMap(([loadStates, loadCurrentPower, availablePower]) => {
+      const stateValues = Object.values(loadStates);
+      debug("reconciling", {
+        loadStates: Object.values(loadStates).map((state) => state.expected),
+        loadCurrentPower: Object.values(loadCurrentPower),
+        availablePower,
+      });
+
+      // if (stateValues.some((state) => state.expected.hasPendingCommand)) {
+      //   debug("pending commands, skipping new allocation");
+      //   return EMPTY;
+      // }
+
+      if (
+        Object.entries(loadStates).some(
+          ([id, state]) =>
+            state.expected.power !== loadCurrentPower[id as keyof T].power
+        )
+      ) {
+        debug("power not in sync yet. skipping new allocation");
+        return EMPTY;
+      }
+
+      // Calculate new allocation based on current allocation
+      const allocation: LoadManagerOutput<T> = allocatePower<T>(
+        loadStates,
+        loadCurrentPower,
+        availablePower,
+        debug
+      );
+
+      debug("Power allocation:", allocation);
+
+      // Return empty - we've set the allocations as side effects
+      return of(allocation);
+    }),
+    shareReplay(1)
+  );
 }
