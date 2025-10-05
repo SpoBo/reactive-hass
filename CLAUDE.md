@@ -268,17 +268,18 @@ timestamp()
 
 ✅ Use `scan` + `timestamp()` for sliding windows instead
 
-### Path Aliases
+### Import Paths
 
-Import custom operators using `@operators/*` alias:
+Use relative imports throughout the codebase:
 ```typescript
-import { rollingAverage } from "@operators/rollingAverage";
+// Import custom operators
+import { rollingAverage } from "./operators/rollingAverage";
+
+// Import from parent directories
+import { IServicesCradle } from "../services/cradle";
 ```
 
-Configured in:
-- `tsconfig.json`, `tsconfig.build.json`, `tsconfig.test.json` - TypeScript path mapping
-- `vitest.config.ts` - Vitest resolve aliases
-- `src/index.ts` - `tsconfig-paths/register` for runtime resolution
+**Note:** The project previously used path aliases (`@operators/*`, `src/*`) but these have been removed to simplify the build process and avoid runtime resolution issues in Docker deployments.
 
 ## Development Notes
 

@@ -1,7 +1,7 @@
 import { Observable } from "rxjs";
 import { distinctUntilChanged, map, share } from "rxjs/operators";
 import ms from "ms";
-import { rollingAverage, AggregationFn } from "@operators/rollingAverage";
+import { rollingAverage, AggregationFn } from "./operators/rollingAverage";
 
 /**
  * Creates a rolling average of the source observable.

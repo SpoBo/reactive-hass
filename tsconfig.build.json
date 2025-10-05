@@ -12,11 +12,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
 
-    "baseUrl": ".",
-    "paths": {
-      "@operators/*": ["src/helpers/operators/*"]
-    },
-
     "outDir": "./dist",
     "rootDir": "./src"
   },

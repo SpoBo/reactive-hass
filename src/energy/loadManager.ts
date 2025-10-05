@@ -17,10 +17,10 @@ import {
 } from "./types";
 import { allocatePower } from "./allocatePower";
 import { isDeepStrictEqual } from "util";
-import { IServicesCradle } from "src/services/cradle";
+import { IServicesCradle } from "../services/cradle";
 import { calculateSolarOverhead } from "./helpers";
-import { createRollingAverage$ } from "src/helpers/createRollingAverage";
-import { median } from "src/helpers/math/aggregations";
+import { createRollingAverage$ } from "../helpers/createRollingAverage";
+import { median } from "../helpers/math/aggregations";
 
 /**
  * Configuration for load manager

@@ -1,6 +1,3 @@
-// Register tsconfig paths for runtime module resolution
-import "tsconfig-paths/register";
-
 import DEBUG from "debug";
 import { merge, timer } from "rxjs";
 
