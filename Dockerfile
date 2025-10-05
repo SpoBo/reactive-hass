@@ -30,6 +30,9 @@ RUN npm ci --omit=dev
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy tsconfig.json for tsconfig-paths runtime resolution
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
 # Environment variables
 ENV NODE_ENV=production
 
