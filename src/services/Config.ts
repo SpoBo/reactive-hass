@@ -41,7 +41,7 @@ const CONVICT_SCHEMA = {
   mqttUrl: {
     default: "mqtt://mqtt.local",
     doc: "The URL to use for MQTT",
-    env: "HASS_MQTT_PREFIX",
+    env: "HASS_MQTT_URL",
     format: String,
   },
 };
@@ -57,9 +57,16 @@ export interface IRootConfig {
 
 export default class Config {
   root$(): Observable<IRootConfig> {
-    const config = convict(CONVICT_SCHEMA).loadFile(
-      process.env.CONFIG_PATH || "./config.yaml"
-    );
+    const config = convict(CONVICT_SCHEMA);
+
+    // Only load config file if it exists or CONFIG_PATH is explicitly set
+    const configPath = process.env.CONFIG_PATH || "./config.yaml";
+    try {
+      config.loadFile(configPath);
+      debug(`Loaded config from ${configPath}`);
+    } catch (error) {
+      debug(`No config file found at ${configPath}, using environment variables and defaults`);
+    }
 
     config.validate();
 
