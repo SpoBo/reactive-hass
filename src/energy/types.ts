@@ -4,14 +4,18 @@ import { IServicesCradle } from "../services/cradle";
 export type LoadId = string;
 
 /**
- * Control characteristics of a load
+ * Control characteristics of a load.
  *
- * TODO: We could use a discriminated union here to make the type more precise.
- * TODO: We can also make it something dynamic that's returned as part of the state updates. So it would indicate what the available options are.
- *       And then it can be more dynamic?
+ * To be updated in real time and used when allocating power.
  */
 interface LoadControl {
-  levels: number[]; // Watts
+  levels: Power[]; // Watts
+  /**
+   * It can be used to explain why the levels are the way they are.
+   * For example, we may only ask a high power level at times.
+   * Or we may emit no power levels at all.
+   */
+  reasoning: string;
 }
 
 /**
@@ -22,14 +26,22 @@ export interface LoadAllocationInput {
   name: string;
   control: LoadControl;
   state: LoadState;
-  eligibility: EligibilityResult;
   priority: PriorityResult;
 }
 
-export type LoadPowerState = {
-  isActive: boolean;
-  power: number; // Watts
+export type LoadPower = {
+  /**
+   * The power of the load. In watts.
+   * 0 means the load should be off/stopped.
+   */
+  power: Power;
+
+  /**
+   * The confidence in the power reading.
+   */
   confidence: "high" | "medium" | "low";
+
+  // TODO: add a timestamp?
 };
 
 /**
@@ -37,38 +49,19 @@ export type LoadPowerState = {
  * This is updated realtime.
  */
 export interface LoadState {
-  // Expected power after pending commands execute (optimistic)
-  expected: {
-    isActive: boolean;
-    power: number; // Watts
-    hasPendingCommand: boolean;
-  };
-
   /**
    * The load will constantly emit how it can be controlled.
    * This is inside the LoadState because it could change dynamically in the future.
+   *
+   * When the load should not charge, it will return no levels.
    */
   control: LoadControl;
-
-  /**
-   * The load will emit what it feels is its own eligibility.
-   * It could be baked into the priority but having it separate makes it easier to debug.
-   */
-  eligibility: EligibilityResult;
 
   /**
    * The load will emit what it feels is its own priority.
    * The manager will then spread the load according to this priority.
    */
   priority: PriorityResult;
-}
-
-/**
- * Result of eligibility check (hard constraints)
- */
-interface EligibilityResult {
-  eligible: boolean;
-  reason?: string;
 }
 
 /**
@@ -83,7 +76,7 @@ interface PriorityResult {
  * Power allocation for a load (in watts)
  * 0 means the load should be off/stopped
  */
-export type PowerAllocation = number;
+export type Power = number;
 
 /**
  * Debug function signature (from debug package)
@@ -94,20 +87,11 @@ export type DebugFn = {
 };
 
 /**
- * Options passed to load factory functions
- */
-export interface LoadOptions {
-  debug: DebugFn;
-}
-
-/**
  * Interface that all managed loads must implement.
  *
  */
 export interface ManagedLoad {
   id: LoadId;
-  name: string;
-
   /**
    * The load will constantly emit its state.
    * And based on that the manager will allocate power to the load.
@@ -120,10 +104,9 @@ export interface ManagedLoad {
    * The load will constantly emit its current state.
    * This is used for the load to determine if it should run or not.
    */
-  powerState$: Observable<LoadPowerState>;
+  power$: Observable<LoadPower>;
 
-  // Method to run the load.
-  run$: Observable<void>;
+  start(input$: Observable<InputState>): Observable<void>;
 }
 
 /**
@@ -133,7 +116,7 @@ export interface InputState {
   /**
    * Allocated power to all the other loads. Since we can have rules in a load that determine to for example not run one airco if another one is running.
    */
-  allocatedPower: Record<LoadId, PowerAllocation>;
+  allocatedPower: Record<LoadId, Power>;
 
   /**
    * How much of the power currently on target is coming from solar.
@@ -147,6 +130,7 @@ export interface InputState {
  */
 export type LoadFactory = (
   cradle: IServicesCradle,
-  input$: Observable<InputState | null>,
-  options: LoadOptions
+  options: {
+    debug: DebugFn;
+  }
 ) => ManagedLoad;

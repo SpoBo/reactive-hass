@@ -1,5 +1,5 @@
 import requireDir from "require-dir";
-import { LoadFactory } from "../types";
+import { LoadFactory, LoadId } from "../types";
 
 /**
  * Auto-load all load factories from the loads directory.
@@ -9,12 +9,30 @@ import { LoadFactory } from "../types";
  */
 const loadModules = requireDir("./");
 
-export const loadFactories: LoadFactory[] = Object.entries(
-  loadModules as Record<string, { default: LoadFactory }>
-).map(([name, module]) => {
-  if (!module.default) {
-    throw new Error(`Load '${name}' does not export a default LoadFactory`);
-  }
-  console.log("found energy load", name);
-  return module.default;
-});
+export const getLoadFactories = (): {
+  factory: LoadFactory;
+  id: LoadId;
+  name: string;
+}[] =>
+  Object.entries(
+    loadModules as Record<
+      string,
+      { default: LoadFactory; config?: { id: LoadId; name: string } }
+    >
+  ).map(([name, module]) => {
+    if (!module.default) {
+      throw new Error(`Load '${name}' does not export a default LoadFactory`);
+    }
+    console.log("found energy load", name);
+
+    const config = module.config ?? {
+      id: name as LoadId,
+      name,
+    };
+
+    return {
+      factory: module.default,
+      id: config.id as LoadId,
+      name: config.name,
+    };
+  });

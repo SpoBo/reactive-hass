@@ -1,10 +1,4 @@
-import {
-  PowerAllocation,
-  DebugFn,
-  LoadId,
-  LoadState,
-  LoadPowerState,
-} from "./types";
+import { Power, DebugFn, LoadId, LoadState, LoadPower } from "./types";
 
 /**
  * Allocates available power across loads by priority
@@ -26,77 +20,47 @@ import {
  * @param debug - Debug function for logging
  * @returns Map of load ID to allocated power (watts)
  */
-export function allocatePower<T extends LoadId[]>(
-  loads: Record<keyof T, LoadState>,
-  loadCurrentPower: Record<keyof T, LoadPowerState>,
+export function allocatePower(
+  loads: Record<LoadId, LoadState>,
+  loadCurrentPower: Record<LoadId, LoadPower>,
   availablePower: number,
   debug: DebugFn
-): Record<keyof T, PowerAllocation> {
-  // Filter to eligible loads
-  const eligible = Object.entries(loads).filter(
-    ([_, l]) => l.eligibility.eligible
-  ) as [keyof T, LoadState][];
-
+): Record<LoadId, Power> {
   // Sort by priority (high to low)
-  eligible.sort((a, b) => b[1].priority.score - a[1].priority.score);
+  const sorted = Object.entries(loads).sort(
+    (a, b) => b[1].priority.score - a[1].priority.score
+  ) as [LoadId, LoadState][];
 
-  debug("Allocating power:", {
-    availablePower,
-    eligibleLoads: eligible.length,
-  });
+  const [remainingPower, allocations] = sorted.reduce(
+    ([remainingPower, allocations], [loadId, load]) => {
+      if (remainingPower <= 0 || load.control.levels.length === 0) {
+        debug(`No levels allowed for load ${loadId.toString()}`);
+        allocations[loadId] = 0;
+        return [remainingPower, allocations];
+      }
 
-  let remainingPower = availablePower;
-  const allocations: Record<keyof T, PowerAllocation> = {} as Record<
-    keyof T,
-    PowerAllocation
-  >;
-
-  for (const [loadId, load] of eligible) {
-    const { control, expected } = load;
-
-    // How much does this load WANT?
-    const availablePowerLevels = control.levels;
-
-    debug(`Load ${loadId.toString()}:`, {
-      levels: availablePowerLevels,
-      available: remainingPower,
-      priority: load.priority.score,
-    });
-
-    // Find the highest level supported.
-    const levelsAllowed = availablePowerLevels
-      .slice(0)
-      .filter(
-        (level) => level <= remainingPower + loadCurrentPower[loadId].power
-      )
-      .sort((a, b) => b - a);
-
-    debug(`Levels allowed:`, levelsAllowed);
-    debug(`Load current power:`, loadCurrentPower[loadId].power);
-    debug(`Load remaining power:`, remainingPower);
-    const maximumLevelForCurrentLoad = levelsAllowed[0];
-
-    if (!maximumLevelForCurrentLoad) {
-      debug(`→ Allocate 0W to ${loadId.toString()} (no available power)`);
-      allocations[loadId] = 0;
-    } else {
+      const allocatedPower = loadCurrentPower[loadId].power;
       debug(
-        `→ Allocate ${maximumLevelForCurrentLoad}W to ${loadId.toString()}`
+        "allocaited power for load",
+        loadId,
+        allocatedPower,
+        "remainingPower",
+        remainingPower
       );
-      allocations[loadId] = maximumLevelForCurrentLoad;
 
-      // Update remaining power
-      remainingPower -= maximumLevelForCurrentLoad;
-    }
-  }
+      const levelsAllowed = load.control.levels
+        .slice(0)
+        .filter((level) => level <= remainingPower + allocatedPower)
+        .sort((a, b) => b - a);
 
-  // Explicitly set 0W for ineligible loads
-  for (const [loadId, load] of eligible) {
-    if (!load.eligibility.eligible && !allocations[loadId]) {
-      allocations[loadId] = 0;
-      debug(`→ Allocate 0W to ${loadId.toString()} (ineligible)`);
-    }
-  }
+      debug(`Levels allowed:`, levelsAllowed);
+
+      allocations[loadId] = levelsAllowed[0] ?? 0;
+
+      return [remainingPower - levelsAllowed[0], allocations];
+    },
+    [availablePower, {} as Record<LoadId, Power>]
+  );
 
   debug("Allocation complete:", {
     remainingPower,

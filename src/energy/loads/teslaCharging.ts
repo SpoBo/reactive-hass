@@ -18,9 +18,10 @@ import {
   shareReplay,
   share,
   debounceTime,
+  debounce,
 } from "rxjs/operators";
 import ms from "ms";
-import { LoadFactory, ManagedLoad } from "../types";
+import { InputState, LoadFactory, LoadId, ManagedLoad } from "../types";
 
 /**
  * Configuration for energy management system
@@ -73,7 +74,7 @@ const ENERGY_CONFIG = {
   stopWindow: "3m" as const,
 } as const;
 
-export const CHARGE_LOAD_ID = "tesla-charging";
+export const CHARGE_LOAD_ID = "tesla-charging" as LoadId;
 
 /**
  * Tesla Ble + TeslaMate MQTT + Universal Mobile Charger charging
@@ -86,13 +87,15 @@ export const CHARGE_LOAD_ID = "tesla-charging";
  * - Priority based on battery level
  */
 const teslaChargingLoad: LoadFactory = (
-  { teslaBle, teslamateMqtt, notify },
-  input$,
+  { teslaBle, teslamateMqtt },
   { debug }
 ) => {
+  const input$ = new BehaviorSubject<Observable<InputState> | null>(null);
+
   // Allocated power target (set by load manager)
   const allocatedPower$ = input$.pipe(
-    map((input) => input?.allocatedPower[CHARGE_LOAD_ID] ?? 0)
+    switchMap((input) => input ?? EMPTY),
+    map((input) => input.allocatedPower[CHARGE_LOAD_ID] ?? 0)
   );
 
   // Expected state (optimistic) - updated immediately on commands
@@ -103,22 +106,17 @@ const teslaChargingLoad: LoadFactory = (
   });
 
   // Track if we're actively managing charging (determines BLE vs MQTT mode)
-  const isActivelyCharging = teslamateMqtt.chargingState$.pipe(
+  const isActivelyCharging$ = teslamateMqtt.chargingState$.pipe(
     map((s) => s === "Charging"),
     distinctUntilChanged(),
     tap((isCharging) => debug("isActivelyCharging", isCharging)),
     shareReplay(1)
   );
 
-  // /**
-  //  * Whenever this is not null, the load will request the power amount.
-  //  */
-  // const realtimePowerRequest$ = new BehaviorSubject<null | number>(null);
-
   const realtimePowerRequest$ = new BehaviorSubject<null | number>(null);
 
   // BLE polling - ONLY when we expect to be charging
-  const bleState$ = isActivelyCharging.pipe(
+  const bleState$ = isActivelyCharging$.pipe(
     switchMap((isManaged) => {
       if (!isManaged) {
         debug("Not managing charge - skipping BLE, car can sleep");
@@ -128,32 +126,14 @@ const teslaChargingLoad: LoadFactory = (
       debug("Managing charge - BLE polling active");
       return combineLatest([
         interval(ms(ENERGY_CONFIG.blePollInterval)),
-        realtimePowerRequest$,
+        realtimePowerRequest$.pipe(debounceTime(ms("5s"))),
       ]).pipe(
         startWith(0),
-        tap(() => {
-          debug("Realtime power request");
-        }),
         switchMap(() =>
           teslaBle.getChargeState$().pipe(
-            tap((state) => {
-              debug("BLE update:", {
-                state,
-              });
-            }),
             catchError((err) => {
               debug("BLE error:", err.message);
               return EMPTY;
-            }),
-            retry({
-              count: 3,
-              delay: (_error, retryCount) => {
-                const delayMs = Math.min(1000 * Math.pow(2, retryCount), 10000);
-                debug(
-                  `Retrying BLE (attempt ${retryCount + 1}) in ${delayMs}ms`
-                );
-                return timer(delayMs);
-              },
             })
           )
         ),
@@ -168,49 +148,39 @@ const teslaChargingLoad: LoadFactory = (
   );
 
   // MQTT state - ONLY when NOT actively managing (for state transitions)
-  const mqttState$ = isActivelyCharging.pipe(
-    switchMap((isActivelyCharging) => {
-      if (isActivelyCharging) {
-        // When managing, ignore MQTT updates
-        debug("Ignoring MQTT - using BLE");
-        return EMPTY;
-      }
-
-      // TODO: When we stop charging we don't necessarily re-send this. And so the charging sync doesn't work.
-      debug("Monitoring MQTT for state changes");
-
-      return interval(ms(ENERGY_CONFIG.blePollInterval)).pipe(
-        switchMap(() => {
-          return combineLatest([
-            teslamateMqtt.chargingState$,
-            teslamateMqtt.chargerPower$,
-          ]).pipe(
-            map(([state, powerKw]) => ({
-              isActive: state === "Charging",
-              power: state === "Charging" ? powerKw * 1000 : 0,
-              confidence: "medium" as const,
-            }))
-          );
-        })
-      );
-
-      // }),
-      // shareReplay(1)
-    })
+  const mqttState$ = combineLatest([
+    teslamateMqtt.chargingState$,
+    teslamateMqtt.chargerPower$,
+  ]).pipe(
+    tap(() => {
+      debug("MQTT state polling");
+    }),
+    startWith([]),
+    map(([state, powerKw]) => ({
+      isActive: state === "Charging",
+      power: state === "Charging" ? powerKw * 1000 : 0,
+      confidence: "medium" as const,
+    }))
   );
 
   // Current state - merge BLE and MQTT (only one will be active at a time)
-  const powerState$ = merge(bleState$, mqttState$).pipe(
-    startWith({
-      isActive: false,
-      power: 0,
-      confidence: "low" as const,
+  const powerState$ = isActivelyCharging$.pipe(
+    tap((isActivelyCharging) =>
+      debug("isActivelyCharging", isActivelyCharging)
+    ),
+    switchMap((isActivelyCharging) => {
+      if (isActivelyCharging) {
+        debug("BLE state polling");
+        return bleState$;
+      }
+      debug("MQTT state polling");
+      return mqttState$;
     }),
+    tap((state) => debug("Current state:", state)),
     distinctUntilChanged(
       (a, b) => a.isActive === b.isActive && a.power === b.power
     ),
-    tap((state) => debug("Current state:", state)),
-    shareReplay(1)
+    tap((state) => debug("Current state:", state))
   ) as Observable<{
     isActive: boolean;
     power: number;
@@ -230,7 +200,7 @@ const teslaChargingLoad: LoadFactory = (
       if (battery >= limit) {
         return { eligible: false, reason: "battery-full" };
       }
-      return { eligible: true };
+      return { eligible: true, reason: "car-is-in-need-of-charging" };
     }),
     distinctUntilChanged(
       (a, b) => a.eligible === b.eligible && a.reason === b.reason
@@ -312,7 +282,6 @@ const teslaChargingLoad: LoadFactory = (
             debug(`✓ Stopped`);
             realtimePowerRequest$.next(0);
           }),
-          // switchMap(() => notify.single$(`🛑 Stopped charging (0W allocated)`)),
           catchError((err) => {
             debug(`✗ Stop failed:`, err.message);
             realtimePowerRequest$.next(0);
@@ -345,18 +314,13 @@ const teslaChargingLoad: LoadFactory = (
             debug(`✓ ${isStarting ? "Started" : "Adjusted"} to ${amps}A`);
             realtimePowerRequest$.next(targetPower);
           }),
-          // switchMap(() => {
-          //   const kw = (targetPower / 1000).toFixed(1);
-          //   return notify.single$(
-          //     `${isStarting ? "🔋 Started" : "⚡ Adjusted"} solar charging to ${kw}kW`
-          //   );
-          // }),
           catchError((err) => {
             debug(`✗ ${isStarting ? "Start" : "Adjust"} failed:`, err.message);
             realtimePowerRequest$.next(0);
-            return notify.single$(
-              `⚠️ Failed to ${isStarting ? "start" : "adjust"} charging: ${err.message}`
-            );
+
+            // TODO: Maybe we need some sort of retry mechanism with a backoff?
+            //       Of we need to emit the failure at least.
+            return EMPTY;
           })
         );
       }
@@ -365,77 +329,35 @@ const teslaChargingLoad: LoadFactory = (
     })
   );
 
-  // Eligibility change notifications (temporary. should eventually be reported by the load manager)
-  const eligibilityNotifications$ = combineLatest([
-    teslamateMqtt.batteryLevel$,
-    teslamateMqtt.chargeLimitSoc$,
-    teslamateMqtt.pluggedIn$,
-  ]).pipe(
-    map(([battery, limit, pluggedIn]) => ({
-      eligible: pluggedIn && battery < limit,
-      battery,
-      limit,
-    })),
-    distinctUntilChanged(
-      (a, b) =>
-        a.eligible === b.eligible &&
-        a.battery === b.battery &&
-        a.limit === b.limit
-    ),
-    switchMap(({ eligible, battery, limit }) => {
-      const remainingPercent = limit - battery;
-      const remainingKwh =
-        (remainingPercent / 100) * ENERGY_CONFIG.batteryCapacityKwh;
-
-      if (eligible) {
-        return notify.single$(
-          `🔌 Tesla eligible for solar charging - ${remainingKwh.toFixed(1)} kWh needed (${battery}% → ${limit}%)`
-        );
-      } else {
-        return notify.single$(
-          `⏸️ Tesla not eligible for charging (${battery}% / ${limit}%)`
-        );
-      }
-    }),
-    share()
-  );
-
   // Combine side effects that need to run
-  const run$ = merge(
-    reconcile$
-    // eligibilityNotifications$
-  ).pipe(map(() => undefined));
+  const run$ = merge(reconcile$).pipe(switchMap(() => EMPTY));
 
   return {
-    id: CHARGE_LOAD_ID,
-    name: "Tesla Model 3 Charging",
     state$: combineLatest([eligibility$, priority$, expectedState$]).pipe(
       map(([eligibility, priority, expected]) => ({
-        eligibility,
         priority,
         control: {
-          levels: [1000, 2000, 2990],
+          levels: eligibility.eligible ? [1000, 2000, 3000] : [],
+          reasoning: eligibility.reason,
         },
         expected,
       }))
     ),
-    powerState$: powerState$.pipe(
-      shareReplay(1),
-      tap((state) => debug("!!! powerState", state))
-    ),
-    run$, // Expose for main automation to subscribe
+    power$: powerState$,
+    id: CHARGE_LOAD_ID,
+    // Start accepts the input$ from the main automation and runs the load.
+    // It also reacts to the input$ values and makes sure the run effect reacts to it.
+    start: (inputObservable$) => {
+      input$.next(inputObservable$);
+
+      return run$;
+    }, // Expose for main automation to subscribe
   } satisfies ManagedLoad;
 };
 
 export default teslaChargingLoad;
 
-function calculateAvailablePowerLevels(
-  minAmps: number,
-  maxAmps: number,
-  wattsPerAmp: number
-) {
-  return Array.from(
-    { length: maxAmps - minAmps + 1 },
-    (_, i) => (minAmps + i) * wattsPerAmp
-  );
-}
+export const config = {
+  id: CHARGE_LOAD_ID,
+  name: "Tesla Model 3 Charging",
+} as const;
