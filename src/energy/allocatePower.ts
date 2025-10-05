@@ -57,7 +57,7 @@ export function allocatePower(
 
       allocations[loadId] = levelsAllowed[0] ?? 0;
 
-      return [remainingPower - levelsAllowed[0], allocations];
+      return [remainingPower - (levelsAllowed[0] ?? 0), allocations];
     },
     [availablePower, {} as Record<LoadId, Power>]
   );

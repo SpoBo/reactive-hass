@@ -119,24 +119,24 @@ export function createLoadManager$(
   ]).pipe(
     switchMap(
       ([loadStates, loadsActualPower, availablePower, powerAllocation]) => {
-        debug("reconciling", {
-          loadStates: Object.values(loadStates),
-          loadCurrentPower: Object.values(loadsActualPower),
-          availablePower,
-          powerAllocation,
-        });
-
         // As long as there is a load that is not in sync, we skip the allocation.
         const loadsNotInSync =
           powerAllocation &&
           Object.keys(loadStates).filter((id) => {
-            return powerAllocation?.[id] !== loadsActualPower[id].power;
+            return (powerAllocation?.[id] ?? 0) !== loadsActualPower[id].power;
           });
 
         if (loadsNotInSync && loadsNotInSync.length > 0) {
           debug(
             "some loads are not in sync yet. skipping new allocation",
-            loadsNotInSync
+            loadsNotInSync.map((id) => {
+              return {
+                id,
+                powerAllocationForId: powerAllocation?.[id],
+                powerAllocation: JSON.stringify(powerAllocation),
+                loadsActualPower: loadsActualPower[id].power,
+              };
+            })
           );
           return EMPTY;
         }
@@ -149,7 +149,7 @@ export function createLoadManager$(
           debug
         );
 
-        debug("Power allocation:", allocation);
+        debug("new allocation:", allocation);
 
         // Return empty - we've set the allocations as side effects
         return of(allocation);
