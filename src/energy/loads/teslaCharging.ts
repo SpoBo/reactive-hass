@@ -337,7 +337,7 @@ const teslaChargingLoad: LoadFactory = (
       map(([eligibility, priority, expected]) => ({
         priority,
         control: {
-          levels: eligibility.eligible ? [1000, 2000, 3000] : [],
+          levels: eligibility.eligible ? [1000, 2000] : [],
           reasoning: eligibility.reason,
         },
         expected,
