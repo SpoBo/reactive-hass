@@ -2,15 +2,12 @@
 /* eslint-disable no-undef */
 import DEBUG from "debug";
 import { from, Observable, switchMap, timeout, catchError, tap } from "rxjs";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { restartContainerViaSsh, SshConfig } from "./SshRestart";
 
 const debug = DEBUG("r-h.tesla-ble");
-const execAsync = promisify(exec);
 
 const REQUEST_TIMEOUT_MS = 15000; // 15 seconds timeout for RxJS operators
 const FETCH_TIMEOUT_MS = 60000; // 1 minute timeout for fetch calls
-const SSH_HOST = "vincent@10.0.0.15";
 const DOCKER_CONTAINER = "tesla-ble-http-proxy";
 
 export interface TeslaChargeState {
@@ -53,10 +50,12 @@ interface TeslaCommandResponse {
 export default class TeslaBle {
   private baseUrl: string;
   private vin: string;
+  private sshConfig: SshConfig;
 
-  constructor(baseUrl: string, vin: string) {
+  constructor(baseUrl: string, vin: string, sshConfig: SshConfig) {
     this.baseUrl = baseUrl;
     this.vin = vin;
+    this.sshConfig = sshConfig;
   }
 
   /**
@@ -113,16 +112,11 @@ export default class TeslaBle {
    * Restart the Tesla BLE HTTP Proxy docker container via SSH
    */
   private restartProxy$(): Observable<string> {
-    const command = `ssh ${SSH_HOST} "docker restart ${DOCKER_CONTAINER}"`;
-    debug(`Executing: ${command}`);
-
-    return from(execAsync(command)).pipe(
-      tap(({ stdout, stderr }) => {
-        if (stdout) debug(`SSH stdout: ${stdout.trim()}`);
-        if (stderr) debug(`SSH stderr: ${stderr.trim()}`);
-        debug("Tesla BLE proxy container restarted successfully");
-      }),
-      switchMap(({ stdout }) => from([stdout.trim()]))
+    return from(
+      restartContainerViaSsh({
+        sshConfig: this.sshConfig,
+        containerName: DOCKER_CONTAINER,
+      })
     );
   }
 

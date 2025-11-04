@@ -44,6 +44,30 @@ const CONVICT_SCHEMA = {
     env: "HASS_MQTT_URL",
     format: String,
   },
+  bleSshUser: {
+    default: "",
+    doc: "SSH username for BLE integration",
+    env: "BLE_SSH_USER",
+    format: String,
+  },
+  bleSshHost: {
+    default: "",
+    doc: "SSH host or IP address for BLE integration",
+    env: "BLE_SSH_HOST",
+    format: String,
+  },
+  bleSshPort: {
+    default: "",
+    doc: "SSH port for BLE integration (optional, defaults to 22 if not specified)",
+    env: "BLE_SSH_PORT",
+    format: String,
+  },
+  bleSshPassword: {
+    default: "",
+    doc: "SSH password for BLE integration (optional, if not provided will use key-based authentication)",
+    env: "BLE_SSH_PASSWORD",
+    format: String,
+  },
 };
 
 export interface IRootConfig {
@@ -52,6 +76,10 @@ export interface IRootConfig {
   idPrefix?: string;
   mqttDiscoveryPrefix: string;
   mqttUrl: string;
+  bleSshUser: string;
+  bleSshHost: string;
+  bleSshPort: string;
+  bleSshPassword: string;
   objectId: string;
 }
 
@@ -64,8 +92,10 @@ export default class Config {
     try {
       config.loadFile(configPath);
       debug(`Loaded config from ${configPath}`);
-    } catch (error) {
-      debug(`No config file found at ${configPath}, using environment variables and defaults`);
+    } catch {
+      debug(
+        `No config file found at ${configPath}, using environment variables and defaults`
+      );
     }
 
     config.validate();
@@ -76,6 +106,10 @@ export default class Config {
       idPrefix: config.get("idPrefix"),
       mqttDiscoveryPrefix: config.get("mqttDiscoveryPrefix"),
       mqttUrl: config.get("mqttUrl"),
+      bleSshUser: config.get("bleSshUser"),
+      bleSshHost: config.get("bleSshHost"),
+      bleSshPort: config.get("bleSshPort"),
+      bleSshPassword: config.get("bleSshPassword"),
       objectId: "reactive-hass",
     };
     debug("root:", root);

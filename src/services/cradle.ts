@@ -1,6 +1,7 @@
 import { createContainer, InjectionMode, asClass, asFunction } from "awilix";
+import { firstValueFrom } from "rxjs";
 
-import Config from "./Config";
+import Config, { IRootConfig } from "./Config";
 import Socket from "./Socket";
 import States from "./States";
 import Events from "./Events";
@@ -65,7 +66,15 @@ container.register({
   hassStatus: asClass(HassStatus, { lifetime: "SINGLETON" }),
   binarySensor: asClass(BinarySensor, { lifetime: "SINGLETON" }),
   teslaBle: asFunction(
-    () => new TeslaBle(TESLA_CONFIG.baseUrl, TESLA_CONFIG.vin),
+    async (cradle) => {
+      const config = await firstValueFrom<IRootConfig>(cradle.config.root$());
+      return new TeslaBle(TESLA_CONFIG.baseUrl, TESLA_CONFIG.vin, {
+        user: config.bleSshUser,
+        host: config.bleSshHost,
+        port: config.bleSshPort,
+        password: config.bleSshPassword,
+      });
+    },
     { lifetime: "SINGLETON" }
   ),
   teslamateMqtt: asFunction(
